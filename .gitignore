@@ -1,0 +1,17 @@
+# Variables de entorno: nunca van al repositorio
+.env
+.env.*
+*.key
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+*.egg-info/
+
+# Editores
+.vscode/
+.idea/
+.DS_Store
