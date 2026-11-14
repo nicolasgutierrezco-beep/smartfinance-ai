@@ -15,3 +15,6 @@ venv/
 .vscode/
 .idea/
 .DS_Store
+
+# Credenciales de Firebase: nunca al repositorio
+firebase-credentials.json

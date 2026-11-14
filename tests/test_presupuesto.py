@@ -9,6 +9,7 @@ from decimal import Decimal
 import pytest
 
 from smartfinance.presupuesto import (
+    GastosSuperanIngresosError,
     MetaInalcanzableError,
     MontoInvalidoError,
     calcular_limite_diario,
@@ -158,6 +159,59 @@ def test_un_monto_en_negativo_se_rechaza():
             meta_ahorro=Decimal("-50000"),
             dias_del_mes=30,
         )
+
+
+def test_gastos_fijos_mayores_que_los_ingresos_avisan_claro():
+    """Revisión S6, H-02: antes decía «$-200.000 COP máximo», que no significa nada."""
+    with pytest.raises(GastosSuperanIngresosError) as error:
+        calcular_limite_diario(
+            ingresos_mensuales=Decimal("800000"),
+            gastos_fijos=Decimal("1000000"),
+            meta_ahorro=Decimal("0"),
+            dias_del_mes=30,
+        )
+
+    mensaje = str(error.value)
+    assert "$1.000.000" in mensaje and "$800.000" in mensaje
+    assert "-$" not in mensaje and "$-" not in mensaje
+
+
+def test_un_float_se_rechaza_con_un_mensaje_claro_y_no_con_un_typeerror():
+    """Revisión S6, H-03: antes un float reventaba con «unsupported operand type»."""
+    with pytest.raises(MontoInvalidoError) as error:
+        calcular_limite_diario(
+            ingresos_mensuales=1500000.0,  # float a propósito
+            gastos_fijos=Decimal("0"),
+            meta_ahorro=Decimal("300000"),
+            dias_del_mes=30,
+        )
+
+    assert "float" in str(error.value)
+    assert "Decimal" in str(error.value)
+
+
+def test_un_booleano_no_cuela_como_dia_del_mes():
+    """Revisión S6, H-03: True vale 1 en Python y antes pasaba como «día 1»."""
+    with pytest.raises(ValueError):
+        calcular_limite_diario(
+            ingresos_mensuales=Decimal("1500000"),
+            gastos_fijos=Decimal("0"),
+            meta_ahorro=Decimal("300000"),
+            dias_del_mes=30,
+            dia_actual=True,
+        )
+
+
+def test_un_entero_normal_sigue_funcionando_como_monto():
+    """Un int es exacto, así que se acepta igual que un Decimal."""
+    limite = calcular_limite_diario(
+        ingresos_mensuales=1500000,
+        gastos_fijos=0,
+        meta_ahorro=300000,
+        dias_del_mes=30,
+    )
+
+    assert limite == Decimal("40000")
 
 
 def test_un_dia_que_no_existe_en_ese_mes_se_rechaza():
