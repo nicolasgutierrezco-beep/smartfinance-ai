@@ -1,7 +1,9 @@
-# Variables de entorno: nunca van al repositorio
+# Variables de entorno: nunca van al repositorio...
 .env
 .env.*
 *.key
+# ...salvo la plantilla, que solo tiene nombres y valores de ejemplo
+!.env.example
 
 # Python
 __pycache__/
