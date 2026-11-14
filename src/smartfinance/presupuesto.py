@@ -17,7 +17,10 @@ CERO = Decimal("0")
 
 
 class MontoInvalidoError(ValueError):
-    """Se lanza cuando llega un monto en negativo."""
+    """Se lanza cuando un monto viene en negativo o con un tipo que no sirve.
+
+    Un tipo que no sirve es float (pierde centavos) o bool (True valdría $1).
+    """
 
 
 class MetaInalcanzableError(ValueError):
@@ -86,7 +89,41 @@ def calcular_limite_diario(
     dia_actual: int = 1,
     gastado_hasta_hoy: Decimal = Decimal("0"),
 ) -> Decimal:
-    """Dice cuánto se puede gastar hoy y cada día que queda del mes."""
+    """Dice cuánto se puede gastar hoy y cada día que queda del mes.
+
+    Hace la cuenta en tres pasos: a los ingresos les resta los gastos fijos,
+    a eso le aparta la meta de ahorro y le descuenta lo ya gastado, y el
+    saldo lo divide entre los días que faltan, contando el de hoy. Solo
+    calcula: no lee la fecha del sistema, no guarda nada ni llama a ninguna
+    IA, para que el resultado sea siempre el mismo con los mismos datos.
+
+    Args:
+        ingresos_mensuales: Lo que entra en el mes, en pesos. Decimal o int.
+        gastos_fijos: Lo ya comprometido (arriendo, servicios, cuotas).
+        meta_ahorro: Lo que se quiere guardar este mes. Puede ser cero.
+        dias_del_mes: Cuántos días tiene el mes, entre 28 y 31.
+        dia_actual: En qué día va el mes, de 1 a dias_del_mes. Por defecto 1.
+            El día de hoy todavía cuenta como día para gastar.
+        gastado_hasta_hoy: Lo ya gastado del presupuesto libre. Por defecto 0.
+
+    Returns:
+        El máximo que se puede gastar hoy y cada día restante, en pesos
+        enteros, redondeado hacia abajo. Nunca es negativo: si ya se gastó de
+        más, devuelve 0.
+
+    Raises:
+        MontoInvalidoError: Si un monto es negativo, o llega como float o bool.
+        ValueError: Si dias_del_mes está fuera de 28..31, si dia_actual no
+            cae dentro del mes, o si alguno de los dos no es un entero.
+        GastosSuperanIngresosError: Si los gastos fijos superan los ingresos.
+        MetaInalcanzableError: Si la meta es mayor que lo disponible
+            (ingresos menos gastos fijos). El mensaje dice el máximo posible.
+
+    Ejemplo:
+        >>> calcular_limite_diario(Decimal("1500000"), Decimal("0"),
+        ...                        Decimal("300000"), 30)
+        Decimal('40000')
+    """
     # Primero el tipo, luego el valor: así un float o un bool se rechazan con
     # un mensaje propio y no con un TypeError de Python a mitad de la cuenta.
     ingresos_mensuales = _como_monto(ingresos_mensuales, "los ingresos")
