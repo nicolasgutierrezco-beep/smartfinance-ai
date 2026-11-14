@@ -1,39 +1,114 @@
 # SmartFinance AI
 
-Aplicación de finanzas personales que entiende frases cotidianas, avisa de las facturas
-por vencer y calcula cuánto se puede gastar al día sin romper la meta de ahorro del mes.
-
-Este repositorio corresponde al proyecto final del Seminario en Inteligencia Artificial
-Aplicada al Ciclo de Vida del Software.
+Finanzas personales que aconsejan, no solo registran.
 
 - **Estudiante:** Nicolás Andrés Gutiérrez Collazos
-- **Lenguaje:** Python 3.11
-- **Pruebas:** pytest
+- **Seminario:** Inteligencia Artificial Aplicada al Ciclo de Vida del Software
+- **Estado:** primer incremento funcional (HU-04), revisado en la semana 6
 
 ---
 
-## Funcionalidad de la semana 5
+## 1. Qué es
 
-### La historia de usuario
+SmartFinance AI es una aplicación de finanzas personales. La idea es que el usuario
+escriba frases normales como «Pagué $15.000 en el súper», y la app clasifique el gasto
+sola, le avise cuando se acerque el vencimiento de una tarjeta y le diga **cuánto puede
+gastar hoy** sin romper la meta de ahorro que se puso para el mes.
 
-**HU-04 · Calcular el límite de gasto diario según la meta de ahorro.** Prioridad: *Must*.
+Este repositorio tiene el primer pedazo que funciona de verdad: el cálculo del límite de
+gasto diario (historia de usuario **HU-04**). Es una función de Python, con sus pruebas,
+que recibe los números del mes y devuelve cuánto se puede gastar cada día que falta.
 
-> **Como** usuario personal, **quiero** fijar una meta de ahorro mensual, **para que** el
-> sistema me diga exactamente cuánto puedo gastar al día sin comprometerla.
+**Lo que hace hoy**
 
-**Escenario 1 — Cálculo del presupuesto diario (éxito)**
+- Resta los gastos fijos de los ingresos para saber lo que de verdad hay disponible.
+- Aparta la meta de ahorro y descuenta lo ya gastado.
+- Reparte el saldo entre los días que faltan, contando el de hoy.
+- Redondea **hacia abajo** y **nunca devuelve negativos**.
+- Rechaza con un mensaje claro los datos que no tienen sentido: montos negativos,
+  números con decimales flotantes, días que no existen, gastos fijos mayores que los
+  ingresos, y metas imposibles.
 
-- **Dado que** el usuario fija una meta de ahorro de $300.000 COP para un mes de 30 días,
-  con ingresos de $1.500.000 COP,
-- **cuando** el sistema calcula el presupuesto,
-- **entonces** asigna un margen máximo de gasto de $40.000 COP diarios.
+**Lo que todavía no hace** (viene en las siguientes semanas, según el diseño del ADR-001):
+registrar gastos en lenguaje natural con la API del LLM, guardar en PostgreSQL, enviar
+alertas con Firebase.
 
-**Escenario 2 — Meta superior a la capacidad financiera (error)**
+## 2. Requisitos
 
-- **Dado que** los ingresos netos son $800.000 COP y los gastos fijos $700.000 COP,
-- **cuando** el usuario fija una meta de ahorro de $250.000 COP,
-- **entonces** el sistema muestra «La meta supera tu disponibilidad mensual
-  ($100.000 COP máximo)».
+- **Python 3.11 o superior.** Se probó con 3.11 y 3.13.
+- **pip**, que viene con Python.
+- Nada más. La función usa solo la librería estándar de Python. La única dependencia
+  externa es `pytest`, y solo sirve para correr las pruebas.
+
+No necesita base de datos, ni conexión a internet, ni ninguna clave de API.
+
+## 3. Instalación
+
+Clona el repositorio y entra a la carpeta:
+
+```bash
+git clone <url-del-repositorio>
+cd smartfinance-ai
+```
+
+Crea un entorno virtual y actívalo. En Windows (PowerShell):
+
+```powershell
+python -m venv .venv
+.venv\Scripts\activate
+```
+
+En Mac o Linux:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+Si Windows te muestra un error de permisos al activar, ejecuta antes
+`Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass` en esa misma terminal.
+
+Instala la dependencia de pruebas:
+
+```bash
+pip install -r requirements.txt
+```
+
+**Variables de entorno.** Hoy no hace falta ninguna. El archivo `.env.example` deja
+declaradas las que va a necesitar la arquitectura completa (base de datos, Redis, API del
+LLM, Firebase). Cuando llegue el momento, cópialo como `.env` y pon ahí los valores
+reales; el `.env` nunca se sube al repositorio.
+
+## 4. Ejecución
+
+Todavía no hay interfaz ni servidor: la función se usa desde Python. Con el entorno
+activo, desde la raíz del proyecto:
+
+```bash
+python -c "import sys; sys.path.insert(0, 'src'); from decimal import Decimal; from smartfinance.presupuesto import calcular_limite_diario as f; print(f(Decimal('1500000'), Decimal('0'), Decimal('300000'), 30))"
+```
+
+Debe imprimir `40000`: el escenario de la historia de usuario.
+
+Para jugar con otros números es más cómodo abrir Python y escribir paso a paso:
+
+```python
+import sys; sys.path.insert(0, "src")
+from decimal import Decimal
+from smartfinance.presupuesto import calcular_limite_diario
+
+# Camila: gana $2.500.000, paga $1.600.000 de fijos, quiere ahorrar $400.000.
+# Va en el día 19 y ya gastó $390.000 de su presupuesto libre.
+calcular_limite_diario(
+    ingresos_mensuales=Decimal("2500000"),
+    gastos_fijos=Decimal("1600000"),
+    meta_ahorro=Decimal("400000"),
+    dias_del_mes=30,
+    dia_actual=19,
+    gastado_hasta_hoy=Decimal("390000"),
+)
+# Decimal('9166')  ->  le quedan $110.000 para 12 días
+```
 
 ### El contrato de la función
 
@@ -48,124 +123,117 @@ def calcular_limite_diario(
 ) -> Decimal:
 ```
 
-**Qué recibe**
-
 | Parámetro | Tipo | Qué significa |
 | --- | --- | --- |
-| `ingresos_mensuales` | `Decimal` | Lo que entra en el mes, en pesos. No puede ser negativo. |
-| `gastos_fijos` | `Decimal` | Lo que ya está comprometido: arriendo, servicios, cuotas. No puede ser negativo. |
-| `meta_ahorro` | `Decimal` | Lo que la persona quiere guardar este mes. No puede ser negativa. |
-| `dias_del_mes` | `int` | Cuántos días tiene el mes. Entre 28 y 31. |
-| `dia_actual` | `int` | En qué día va el mes. Por defecto 1. El día de hoy todavía cuenta. |
-| `gastado_hasta_hoy` | `Decimal` | Lo que ya se gastó del presupuesto libre. Por defecto 0. |
+| `ingresos_mensuales` | `Decimal` o `int` | Lo que entra en el mes, en pesos. No negativo. |
+| `gastos_fijos` | `Decimal` o `int` | Lo ya comprometido: arriendo, servicios, cuotas. No negativo. |
+| `meta_ahorro` | `Decimal` o `int` | Lo que se quiere guardar este mes. Puede ser cero. |
+| `dias_del_mes` | `int` | Entre 28 y 31. |
+| `dia_actual` | `int` | De 1 a `dias_del_mes`. Por defecto 1. Hoy todavía cuenta. |
+| `gastado_hasta_hoy` | `Decimal` o `int` | Lo ya gastado del presupuesto libre. Por defecto 0. |
 
-**Qué devuelve**
+**Devuelve** un `Decimal` en pesos enteros, redondeado hacia abajo, nunca negativo.
 
-Un `Decimal` con el máximo que se puede gastar hoy y cada uno de los días que quedan,
-en pesos enteros. Nunca devuelve centavos y nunca devuelve un número negativo.
+**Errores que lanza**
 
-**Cómo hace la cuenta**
+| Situación | Error | Mensaje |
+| --- | --- | --- |
+| Un monto en negativo | `MontoInvalidoError` | «El valor de la meta debe ser un monto numérico positivo» |
+| Un `float` o un `bool` como monto | `MontoInvalidoError` | «… llegó como float; debe ser Decimal (o un entero)…» |
+| Días fuera de 28..31, o día fuera del mes, o no entero | `ValueError` | «El día actual debe estar dentro del mes» |
+| Gastos fijos mayores que los ingresos | `GastosSuperanIngresosError` | «Tus gastos fijos ($1.000.000 COP) superan tus ingresos ($800.000 COP)…» |
+| Meta mayor que lo disponible | `MetaInalcanzableError` | «La meta supera tu disponibilidad mensual ($100.000 COP máximo)» |
 
-En palabras simples, la plata se reparte en tres montones y solo el tercero se puede gastar:
+**Casos límite que la función maneja a propósito**
 
-1. De los ingresos se restan los gastos fijos. Lo que queda es la **disponibilidad del mes**.
-2. De esa disponibilidad se aparta la meta de ahorro. Lo que sobra es el **presupuesto libre**.
-3. A ese presupuesto libre se le descuenta lo que ya se gastó, y el saldo se divide entre
-   los días que faltan, incluido hoy.
-
-**Supuestos**
-
-- Todos los montos están en pesos colombianos y la función no maneja centavos, porque en
-  Colombia no circulan.
-- El resultado se redondea **hacia abajo**. Si la cuenta da $9.166,67 la función devuelve
-  $9.166. Redondear hacia arriba sería darle permiso a la persona de pasarse de la meta.
-- Los días que faltan incluyen el día de hoy. Si hoy es 1 de un mes de 30 días, quedan 30
-  días, no 29.
-- La función solo calcula. No guarda nada en la base de datos ni llama a ninguna IA.
-
-**Casos límite**
-
-| Situación | Qué hace la función |
+| Situación | Qué hace |
 | --- | --- |
-| La meta es exactamente igual a la disponibilidad | Devuelve `0`. No es un error: significa que todo el sobrante va al ahorro. |
-| Hoy es el último día del mes | Reparte todo el saldo en ese único día. |
-| Ya se gastó más del presupuesto libre | Devuelve `0`, nunca un número negativo. |
-| La meta supera la disponibilidad | Lanza `MetaInalcanzableError` con el máximo posible en el mensaje. |
-| Un monto viene en negativo | Lanza `MontoInvalidoError`. |
-| El día actual no existe en ese mes | Lanza `ValueError`. |
+| Meta igual a la disponibilidad | Devuelve `0`. Todo el sobrante va al ahorro; no es error. |
+| Hoy es el último día del mes | Todo el saldo se concentra en ese día. |
+| Ya se gastó más del presupuesto libre | Devuelve `0`, nunca un número en rojo. |
+| La división no da exacta | Redondea hacia abajo: $9.166,67 → $9.166. |
 
-**Ejemplos**
+Los supuestos están explicados en el docstring de la función
+(`src/smartfinance/presupuesto.py`), que además trae un ejemplo que `doctest` ejecuta.
 
-```python
-from decimal import Decimal
-from smartfinance.presupuesto import calcular_limite_diario
+## 5. Pruebas
 
-# 1. El escenario de la historia de usuario: inicio de mes, sin gastos fijos.
-calcular_limite_diario(
-    ingresos_mensuales=Decimal("1500000"),
-    gastos_fijos=Decimal("0"),
-    meta_ahorro=Decimal("300000"),
-    dias_del_mes=30,
-)
-# Decimal('40000')
-
-# 2. A mitad de mes, con gastos fijos y plata ya gastada.
-calcular_limite_diario(
-    ingresos_mensuales=Decimal("2500000"),
-    gastos_fijos=Decimal("1600000"),
-    meta_ahorro=Decimal("400000"),
-    dias_del_mes=30,
-    dia_actual=19,
-    gastado_hasta_hoy=Decimal("390000"),
-)
-# Decimal('9166')   -> quedan $110.000 para 12 días
-
-# 3. Alguien que ya se pasó: el cupo es cero, no un número en rojo.
-calcular_limite_diario(
-    ingresos_mensuales=Decimal("1000000"),
-    gastos_fijos=Decimal("0"),
-    meta_ahorro=Decimal("900000"),
-    dias_del_mes=30,
-    dia_actual=10,
-    gastado_hasta_hoy=Decimal("150000"),
-)
-# Decimal('0')
-
-# 4. La meta no cabe: la función avisa en lugar de devolver un número imposible.
-calcular_limite_diario(
-    ingresos_mensuales=Decimal("800000"),
-    gastos_fijos=Decimal("700000"),
-    meta_ahorro=Decimal("250000"),
-    dias_del_mes=30,
-)
-# MetaInalcanzableError: La meta supera tu disponibilidad mensual ($100.000 COP máximo)
-```
-
-### Cómo ejecutar las pruebas
+Con el entorno activo, un solo comando corre las 15 pruebas:
 
 ```bash
-pip install -r requirements.txt
 pytest
 ```
 
-Un solo comando corre las 11 pruebas. Para verlas una por una con su nombre:
+Para verlas con su nombre, una por una:
 
 ```bash
 pytest -v
 ```
 
----
+Los nombres se leen como frases y funcionan como la especificación de la función:
+`test_redondea_hacia_abajo_para_no_romper_la_meta`,
+`test_si_ya_se_paso_del_presupuesto_devuelve_cero_y_no_un_negativo`, etcétera.
 
-## Estructura del repositorio
+Están repartidas así:
+
+| Tipo | Cuántas | Ejemplos |
+| --- | --- | --- |
+| Normales | 4 | El escenario exacto de HU-04 ($40.000), a mitad de mes, con enteros |
+| De límite | 5 | Meta igual a lo disponible, último día, ya gastó de más, redondeo, febrero |
+| De error | 6 | Meta imposible, monto negativo, float, bool, día inexistente, fijos > ingresos |
+
+**Linter.** El proyecto tiene `ruff` configurado en `pyproject.toml` con reglas de
+estilo, errores, errores probables y seguridad (E, F, B, S, UP). Para correrlo:
+
+```bash
+pip install ruff
+ruff check .
+```
+
+Debe decir `All checks passed!`. El único aviso silenciado es `S101` dentro de `tests/`,
+porque ahí el `assert` es la forma normal de comprobar con pytest; la razón está escrita
+en el mismo `pyproject.toml`.
+
+## 6. Estructura del repositorio
 
 ```
 smartfinance-ai/
-├── README.md                          Este archivo
-├── bitacora_ia.md                     Registro de cómo se usó la IA
-├── requirements.txt                   Dependencias
+├── README.md                      Este archivo
+├── bitacora_ia.md                 Qué propuso la IA, qué se aceptó y qué se rechazó
+├── revision_seguridad.md          Informe de revisión de código y seguridad (semana 6)
+├── pyproject.toml                 Datos del proyecto y configuración del linter
+├── pytest.ini                     Dónde buscar el código y las pruebas
+├── requirements.txt               Dependencias (solo pytest)
+├── .env.example                   Plantilla de variables de entorno; el .env real no se sube
+├── .gitignore                     Lo que nunca va al repositorio: .env, claves, cachés
 ├── src/
 │   └── smartfinance/
-│       └── presupuesto.py             La funcionalidad de la semana 5
+│       ├── __init__.py
+│       └── presupuesto.py         La funcionalidad: calcular_limite_diario y sus errores
 └── tests/
-    └── test_presupuesto.py            Las pruebas
+    └── test_presupuesto.py        Las 15 pruebas
 ```
+
+## 7. Uso de IA
+
+Este proyecto se construyó con un asistente de IA (Claude) como herramienta, y las
+decisiones quedaron registradas. Dos archivos cuentan la historia completa:
+
+- **`bitacora_ia.md`**: cada sugerencia importante del asistente, con la decisión que se
+  tomó (aceptada, aceptada con cambios o rechazada), la razón y cómo se verificó. Incluye
+  las entradas de la semana 5 (construcción) y de la semana 6 (revisión).
+- **`revision_seguridad.md`**: la revisión de código y seguridad de la semana 6, con los
+  hallazgos del linter, de la lista de revisión y de una segunda revisión hecha con IA,
+  cada uno clasificado como real o falso positivo después de verificarlo en el código.
+
+La regla que se siguió: **la IA propone, el código se verifica**. Ninguna prueba se
+modificó para que el código pasara; cuando una corrección cambió el comportamiento, se
+agregó una prueba nueva para ese caso.
+
+## 8. Autor y licencia
+
+**Autor:** Nicolás Andrés Gutiérrez Collazos. Proyecto final del Seminario en Inteligencia
+Artificial Aplicada al Ciclo de Vida del Software, Fundación Escuela Tecnológica de Neiva
+Jesús Oviedo Pérez, 2026.
+
+**Licencia:** MIT. Se puede usar, copiar y modificar citando al autor.
