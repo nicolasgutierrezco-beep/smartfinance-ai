@@ -45,7 +45,7 @@ def _exigir_que_el_dia_exista(dias_del_mes: int, dia_actual: int) -> None:
 
 def _en_pesos(monto: Decimal) -> str:
     """Escribe 100000 como «100.000», que es como se lee un precio aquí."""
-    return "{:,.0f}".format(monto).replace(",", ".")
+    return f"{monto:,.0f}".replace(",", ".")
 
 
 def calcular_limite_diario(
