@@ -9,6 +9,7 @@ from decimal import Decimal
 import pytest
 
 from smartfinance.presupuesto import (
+    GastosSuperanIngresosError,
     MetaInalcanzableError,
     MontoInvalidoError,
     calcular_limite_diario,
@@ -158,6 +159,21 @@ def test_un_monto_en_negativo_se_rechaza():
             meta_ahorro=Decimal("-50000"),
             dias_del_mes=30,
         )
+
+
+def test_gastos_fijos_mayores_que_los_ingresos_avisan_claro():
+    """Revisión S6, H-02: antes decía «$-200.000 COP máximo», que no significa nada."""
+    with pytest.raises(GastosSuperanIngresosError) as error:
+        calcular_limite_diario(
+            ingresos_mensuales=Decimal("800000"),
+            gastos_fijos=Decimal("1000000"),
+            meta_ahorro=Decimal("0"),
+            dias_del_mes=30,
+        )
+
+    mensaje = str(error.value)
+    assert "$1.000.000" in mensaje and "$800.000" in mensaje
+    assert "-$" not in mensaje and "$-" not in mensaje
 
 
 def test_un_dia_que_no_existe_en_ese_mes_se_rechaza():

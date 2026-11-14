@@ -24,6 +24,10 @@ class MetaInalcanzableError(ValueError):
     """Se lanza cuando la meta de ahorro no cabe en lo que queda del mes."""
 
 
+class GastosSuperanIngresosError(ValueError):
+    """Se lanza cuando los gastos fijos son mayores que los ingresos del mes."""
+
+
 def _exigir_que_no_sea_negativo(monto: Decimal, nombre: str) -> None:
     """Corta de una vez si un monto viene en negativo."""
     if monto < CERO:
@@ -65,6 +69,14 @@ def calcular_limite_diario(
 
     # Paso 1: lo que de verdad queda después de pagar lo obligatorio.
     disponible_del_mes = ingresos_mensuales - gastos_fijos
+    if disponible_del_mes < CERO:
+        # Si lo obligatorio ya supera lo que entra, no hay nada que repartir
+        # ni que ahorrar. Se avisa con las dos cifras, sin «máximos» negativos.
+        raise GastosSuperanIngresosError(
+            f"Tus gastos fijos (${_en_pesos(gastos_fijos)} COP) superan tus "
+            f"ingresos (${_en_pesos(ingresos_mensuales)} COP): este mes no hay "
+            "disponibilidad para ahorrar"
+        )
     if meta_ahorro > disponible_del_mes:
         raise MetaInalcanzableError(
             "La meta supera tu disponibilidad mensual "
