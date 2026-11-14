@@ -108,13 +108,89 @@ Asistente usado: Claude (modo chat y agente, trabajando sobre el repositorio)
   sale vacío, así que no se tocó ninguna.
 - **Commit relacionado:** `Refactor: saca las validaciones y los valores magicos de la funcion`
 
+---
+
+## Entradas de la semana 6 (revisión de código y seguridad)
+
+### Entrada 8
+
+- **Fecha:** 2026-11-14
+- **Prompt o sugerencia:** Segunda revisión con IA. Prompt: «Revisa `presupuesto.py` y
+  `test_presupuesto.py` con estos criterios: corrección frente al contrato, casos límite,
+  seguridad (OWASP), legibilidad y mantenibilidad. Entrega una tabla con archivo y línea,
+  problema, categoría y severidad. Separa los problemas seguros de las sospechas. No
+  propongas cambios a las pruebas». El asistente devolvió 8 hallazgos: 3 seguros y 5
+  sospechas.
+- **Decisión:** Aceptada con cambios
+- **Por qué:** Acepté los 4 hallazgos que resultaron reales (dos docstrings incompletos,
+  una guarda repetida y un mensaje que dice «positivo» aunque acepta cero) y descarté los
+  4 falsos positivos. El más llamativo fue «posible división por cero»: suena grave, pero
+  la validación del día hace imposible que los días restantes sean cero.
+- **Verificación:** Cada hallazgo se buscó en el código por número de línea. La división
+  por cero se comprobó leyendo `_exigir_que_el_dia_exista` y con la prueba del último día
+  del mes, que da 1 día y no 0. El detalle de los 8 está en `revision_seguridad.md`,
+  sección 3.
+- **Commit relacionado:** `34e0f35` (informe) y `11c8723` (docstrings)
+
+### Entrada 9
+
+- **Fecha:** 2026-11-14
+- **Prompt o sugerencia:** Para el hallazgo H-02 (gastos fijos mayores que los ingresos
+  daban «$-200.000 COP máximo»), el asistente propuso reutilizar `MetaInalcanzableError`
+  cambiando solo el texto del mensaje según el caso.
+- **Decisión:** Aceptada con cambios
+- **Por qué:** Reutilizar la excepción arreglaba el mensaje, pero mezclaba dos situaciones
+  distintas bajo el mismo nombre: «tu meta es muy alta» y «tus gastos fijos superan lo que
+  ganas». Quien use la función querrá reaccionar distinto a cada una. Creé una excepción
+  nueva, `GastosSuperanIngresosError`, que dice las dos cifras.
+- **Verificación:** Prueba nueva `test_gastos_fijos_mayores_que_los_ingresos_avisan_claro`,
+  que exige que el mensaje traiga los dos montos y no traiga ningún «$-». Las 11 pruebas
+  anteriores no se tocaron.
+- **Commit relacionado:** `6789feb`
+
+### Entrada 10
+
+- **Fecha:** 2026-11-14
+- **Prompt o sugerencia:** En la revisión, el asistente señaló que seis parámetros son
+  demasiados y propuso agruparlos en una `dataclass` llamada `DatosDelMes`.
+- **Decisión:** Rechazada (pospuesta)
+- **Por qué:** La observación es válida en abstracto, pero hoy todas las llamadas usan
+  nombres (`meta_ahorro=...`) y se leen bien. Y el diseño de la semana 4 ya dice que la
+  capa HTTP tendrá un modelo de Pydantic para `POST /api/v1/metas-ahorro`; ese modelo va
+  a ser exactamente el agrupador que la IA propone. Hacer una dataclass ahora sería
+  construir dos veces lo mismo.
+- **Verificación:** Revisé que ninguna llamada en las 15 pruebas use argumentos por
+  posición más allá de los cuatro obligatorios. Quedó anotado en la tabla de pendientes
+  del informe, con el plan.
+- **Commit relacionado:** `34e0f35` (sección 4 del informe)
+
+### Entrada 11
+
+- **Fecha:** 2026-11-14
+- **Prompt o sugerencia:** Trabajo del agente de código. Instrucción delimitada: «Trabaja en
+  la rama `revision-semana-6`. Configura ruff, corrige cada hallazgo en su propio commit
+  con un mensaje que diga qué se corrigió, no modifiques ninguna prueba existente, agrega
+  pruebas nuevas si cambias el comportamiento, no instales dependencias nuevas, y no
+  integres a `main`».
+- **Decisión:** Aceptada
+- **Por qué:** La rama separada permite ver todo el diff antes de integrarlo, que es lo
+  que pide la tarea. El agente hizo 9 commits, uno por cambio. Revisé el diff completo
+  (`git diff main..revision-semana-6`) antes de integrar: ninguna prueba de la semana 5
+  cambió, las 4 nuevas corresponden a los hallazgos, y no entró ninguna dependencia.
+- **Verificación:** `ruff check .` sin avisos, `pytest` con 15 en verde, `git diff --stat`
+  de `tests/` muestra solo líneas agregadas, ninguna borrada. La integración a `main` se
+  hace con `--no-ff`, para que la rama quede visible en el historial.
+- **Commit relacionado:** rama `revision-semana-6`, del `8e77108` al último de la rama
+
 ## Resumen
 
 | Decisión | Cantidad |
 |---|---|
-| Aceptadas | 2 |
-| Aceptadas con cambios | 2 |
-| Rechazadas | 3 |
+| Aceptadas | 3 |
+| Aceptadas con cambios | 4 |
+| Rechazadas | 4 |
+
+Semana 5: entradas 1 a 7. Semana 6: entradas 8 a 11.
 
 ## Errores que atraparon las pruebas
 
@@ -131,6 +207,14 @@ el día de hoy cuenta dentro de los días que faltan. Una implementación que ca
 `dias_del_mes - dia_actual` en vez de `+ 1` reparte entre 29 días y devuelve $41.379, y la
 prueba falla de inmediato. Sin ese criterio con números concretos, la decisión de si hoy
 cuenta o no se habría quedado como una ambigüedad del contrato.
+
+**Semana 6.** Esta vez los errores no los atrapó una prueba existente sino la revisión, y
+por eso se escribieron pruebas nuevas para que no vuelvan. El «máximo negativo» (H-02) no
+lo detectó ni el linter ni la lectura: el código era correcto en la forma. Apareció al
+ejecutar la función con un caso real, alguien con gastos fijos de $1.000.000 y sueldo de
+$800.000. Y el `float` que reventaba con un `TypeError` (H-03) lo encontré probando
+«qué pasa si alguien manda el número mal». Las 4 pruebas nuevas dejan los dos casos
+clavados.
 
 ## Reflexión final
 
@@ -150,3 +234,10 @@ Para la próxima funcionalidad cambiaría el orden en que doy el contexto: esta 
 el contrato y las pruebas juntos, y la primera respuesta mezcló validaciones con lógica de
 negocio. Creo que si primero fijo los casos límite y solo después pido la implementación,
 el borrador llega más limpio y me ahorro parte del refactor.
+
+**Sobre la semana 6.** Lo que más me sirvió de la segunda revisión no fueron los
+hallazgos reales sino los falsos positivos: verificar por qué «división por cero» no puede
+pasar me obligó a seguir el flujo de validaciones completo, y ahí entendí mi propio código
+mejor que cuando lo escribí. Lo que cambiaría: correr la revisión con IA **antes** de la
+manual, no después. Así la lectura humana se concentra en lo que la herramienta no ve,
+que esta semana fue justamente lo que importaba.
