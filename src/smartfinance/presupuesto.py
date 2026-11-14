@@ -28,6 +28,32 @@ class GastosSuperanIngresosError(ValueError):
     """Se lanza cuando los gastos fijos son mayores que los ingresos del mes."""
 
 
+def _como_monto(valor: object, nombre: str) -> Decimal:
+    """Acepta Decimal o int y lo devuelve como Decimal; rechaza float y bool.
+
+    Un float guarda la plata con error (0.1 + 0.2 no da 0.3), así que no
+    se deja entrar aunque "parezca" un número. Un bool es técnicamente un
+    int en Python, pero nadie quiere que True valga $1.
+    """
+    if isinstance(valor, bool) or not isinstance(valor, (Decimal, int)):
+        raise MontoInvalidoError(
+            f"El valor de {nombre} llegó como {type(valor).__name__}; "
+            "debe ser Decimal (o un entero), nunca float, para no perder "
+            "centavos"
+        )
+    return Decimal(valor)
+
+
+def _como_dia(valor: object, nombre: str) -> int:
+    """Acepta solo enteros de verdad para los días; rechaza bool y float."""
+    if isinstance(valor, bool) or not isinstance(valor, int):
+        raise ValueError(
+            f"El valor de {nombre} debe ser un número entero de días, "
+            f"no {type(valor).__name__}"
+        )
+    return valor
+
+
 def _exigir_que_no_sea_negativo(monto: Decimal, nombre: str) -> None:
     """Corta de una vez si un monto viene en negativo."""
     if monto < CERO:
@@ -61,6 +87,15 @@ def calcular_limite_diario(
     gastado_hasta_hoy: Decimal = Decimal("0"),
 ) -> Decimal:
     """Dice cuánto se puede gastar hoy y cada día que queda del mes."""
+    # Primero el tipo, luego el valor: así un float o un bool se rechazan con
+    # un mensaje propio y no con un TypeError de Python a mitad de la cuenta.
+    ingresos_mensuales = _como_monto(ingresos_mensuales, "los ingresos")
+    gastos_fijos = _como_monto(gastos_fijos, "los gastos fijos")
+    meta_ahorro = _como_monto(meta_ahorro, "la meta")
+    gastado_hasta_hoy = _como_monto(gastado_hasta_hoy, "lo gastado")
+    dias_del_mes = _como_dia(dias_del_mes, "los días del mes")
+    dia_actual = _como_dia(dia_actual, "el día actual")
+
     _exigir_que_no_sea_negativo(ingresos_mensuales, "los ingresos")
     _exigir_que_no_sea_negativo(gastos_fijos, "los gastos fijos")
     _exigir_que_no_sea_negativo(meta_ahorro, "la meta")
