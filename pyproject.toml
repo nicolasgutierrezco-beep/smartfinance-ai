@@ -1,0 +1,32 @@
+[project]
+name = "smartfinance-ai"
+version = "0.1.0"
+description = "Finanzas personales que aconsejan, no solo registran."
+requires-python = ">=3.11"
+
+# ---------------------------------------------------------------------------
+# Linter: ruff
+#
+# Reglas elegidas (las que recomienda la tarea de la semana 6, más UP):
+#   E   estilo (pycodestyle)
+#   F   errores reales (pyflakes): variables sin usar, imports rotos, etc.
+#   B   errores probables (bugbear): trampas típicas de Python
+#   S   seguridad (bandit): secretos, eval, asserts fuera de pruebas, etc.
+#   UP  modernización (pyupgrade): f-strings en vez de .format(), etc.
+#
+# Cómo correrlo:  ruff check .
+# ---------------------------------------------------------------------------
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+src = ["src"]
+
+[tool.ruff.lint]
+select = ["E", "F", "B", "S", "UP"]
+
+[tool.ruff.lint.per-file-ignores]
+# S101 avisa por cada `assert`. En las pruebas el `assert` ES la forma normal
+# de comprobar con pytest, así que ahí no es un riesgo. En el código fuente
+# sigue activo: un assert allí sí sería un aviso válido, porque Python los
+# elimina al correr con -O y la validación desaparecería.
+"tests/*" = ["S101"]
