@@ -188,3 +188,10 @@ def test_pagar_una_deuda_la_descuenta_del_total(deudas_sinteticas):
 
 def test_total_pendiente_sin_deudas_es_cero():
     assert total_pendiente([]) == Decimal("0")
+
+
+def test_estado_escrito_como_texto_se_rechaza():
+    """Agregada en el paso 5 (M10): sin esta validación, «Pagado» como texto
+    no es EstadoDeuda.PAGADO y la deuda pagada generaba alerta."""
+    with pytest.raises(ValueError, match="^El estado debe ser Pendiente o Pagado$"):
+        Deuda("tarjeta de crédito", Decimal("200000"), date(2026, 11, 15), "Pagado")

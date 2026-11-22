@@ -122,3 +122,19 @@ def test_con_datos_sinteticos_del_mes(transacciones_sinteticas):
 def test_transaccion_con_monto_invalido_se_rechaza(monto):
     with pytest.raises(MontoInvalidoError):
         Transaccion("bus", monto, "Transporte")
+
+
+@pytest.mark.parametrize(
+    ("concepto", "categoria", "mensaje"),
+    [
+        # Agregada en el paso 5 (M9): un concepto que no es texto.
+        (None, "Transporte", "^El concepto debe ser texto$"),
+        # Agregada en el paso 5 (M11): categoría vacía o solo espacios.
+        ("bus", "", "^La categoría de la transacción no puede estar vacía$"),
+        ("bus", "   ", "^La categoría de la transacción no puede estar vacía$"),
+    ],
+    ids=["concepto-none", "categoria-vacia", "categoria-espacios"],
+)
+def test_transaccion_con_texto_invalido_se_rechaza(concepto, categoria, mensaje):
+    with pytest.raises(ValueError, match=mensaje):
+        Transaccion(concepto, Decimal("2950"), categoria)
