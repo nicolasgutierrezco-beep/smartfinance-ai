@@ -4,7 +4,8 @@ Finanzas personales que aconsejan, no solo registran.
 
 - **Estudiante:** Nicolás Andrés Gutiérrez Collazos
 - **Seminario:** Inteligencia Artificial Aplicada al Ciclo de Vida del Software
-- **Estado:** primer incremento funcional (HU-04), revisado en la semana 6
+- **Estado:** límite diario (HU-04), alertas y pagos de deudas (HU-03, HU-06) y recomendación
+  por gasto en ocio (HU-02), con 76 pruebas (semana 7)
 
 ---
 
@@ -28,6 +29,14 @@ que recibe los números del mes y devuelve cuánto se puede gastar cada día que
 - Rechaza con un mensaje claro los datos que no tienen sentido: montos negativos,
   números con decimales flotantes, días que no existen, gastos fijos mayores que los
   ingresos, y metas imposibles.
+
+**Desde la semana 7 también**
+
+- Valida que una deuda nueva venza después de hoy y genera el recordatorio cuando faltan
+  2 días, 1 día o vence hoy (HU-03), en `deudas.py`.
+- Marca una deuda como pagada, impide pagarla dos veces y suma lo que falta por pagar (HU-06).
+- Avisa cuando el gasto en ocio pasó el tope y dice cuánto recortar, siempre que haya al
+  menos 5 transacciones (HU-02), en `recomendaciones.py`.
 
 **Lo que todavía no hace** (viene en las siguientes semanas, según el diseño del ADR-001):
 registrar gastos en lenguaje natural con la API del LLM, guardar en PostgreSQL, enviar
@@ -158,7 +167,7 @@ Los supuestos están explicados en el docstring de la función
 
 ## 5. Pruebas
 
-Con el entorno activo, un solo comando corre las 15 pruebas:
+Con el entorno activo, un solo comando corre las 76 pruebas:
 
 ```bash
 pytest
@@ -176,11 +185,16 @@ Los nombres se leen como frases y funcionan como la especificación de la funci�
 
 Están repartidas así:
 
-| Tipo | Cuántas | Ejemplos |
+| Archivo | Cuántas | Qué prueba |
 | --- | --- | --- |
-| Normales | 4 | El escenario exacto de HU-04 ($40.000), a mitad de mes, con enteros |
-| De límite | 5 | Meta igual a lo disponible, último día, ya gastó de más, redondeo, febrero |
-| De error | 6 | Meta imposible, monto negativo, float, bool, día inexistente, fijos > ingresos |
+| `test_presupuesto.py` | 15 | HU-04: casos normales, límite y de error (semanas 5 y 6, sin cambios) |
+| `test_presupuesto_tabla.py` | 17 | HU-04: particiones y valores límite que faltaban (semana 7) |
+| `test_deudas.py` | 26 | HU-03 y HU-06, con tabla de decisión para la alerta |
+| `test_recomendaciones.py` | 18 | HU-02, con tabla de decisión |
+
+`tests/conftest.py` tiene los datos sintéticos (fixtures) que usan las pruebas. El diseño
+de cada caso, de dónde sale su esperado y la revisión de las pruebas generadas con IA
+están en `registro_pruebas.md`.
 
 **Linter.** El proyecto tiene `ruff` configurado en `pyproject.toml` con reglas de
 estilo, errores, errores probables y seguridad (E, F, B, S, UP). Para correrlo:
@@ -201,6 +215,7 @@ smartfinance-ai/
 ├── README.md                      Este archivo
 ├── bitacora_ia.md                 Qué propuso la IA, qué se aceptó y qué se rechazó
 ├── revision_seguridad.md          Informe de revisión de código y seguridad (semana 6)
+├── registro_pruebas.md            Reglas, tablas de casos y revisión de pruebas (semana 7)
 ├── pyproject.toml                 Datos del proyecto y configuración del linter
 ├── pytest.ini                     Dónde buscar el código y las pruebas
 ├── requirements.txt               Dependencias (solo pytest)
@@ -209,19 +224,28 @@ smartfinance-ai/
 ├── src/
 │   └── smartfinance/
 │       ├── __init__.py
-│       └── presupuesto.py         La funcionalidad: calcular_limite_diario y sus errores
+│       ├── presupuesto.py         calcular_limite_diario y sus errores (HU-04)
+│       ├── deudas.py              Vencimientos, alertas y pagos de deudas (HU-03, HU-06)
+│       └── recomendaciones.py     Recomendación por gasto en ocio (HU-02)
 └── tests/
-    └── test_presupuesto.py        Las 15 pruebas
+    ├── conftest.py                Datos sintéticos de prueba (fixtures)
+    ├── test_presupuesto.py        Las 15 pruebas de las semanas 5 y 6
+    ├── test_presupuesto_tabla.py  Límites y particiones de HU-04
+    ├── test_deudas.py             Pruebas de HU-03 y HU-06
+    └── test_recomendaciones.py    Pruebas de HU-02
 ```
 
 ## 7. Uso de IA
 
 Este proyecto se construyó con un asistente de IA (Claude) como herramienta, y las
-decisiones quedaron registradas. Dos archivos cuentan la historia completa:
+decisiones quedaron registradas. Tres archivos cuentan la historia completa:
 
 - **`bitacora_ia.md`**: cada sugerencia importante del asistente, con la decisión que se
   tomó (aceptada, aceptada con cambios o rechazada), la razón y cómo se verificó. Incluye
-  las entradas de la semana 5 (construcción) y de la semana 6 (revisión).
+  las entradas de la semana 5 (construcción), la semana 6 (revisión) y la semana 7
+  (pruebas).
+- **`registro_pruebas.md`**: las reglas de cada función, sus tablas de casos, qué pruebas
+  de la IA se corrigieron o descartaron y por qué, y los errores introducidos a propósito.
 - **`revision_seguridad.md`**: la revisión de código y seguridad de la semana 6, con los
   hallazgos del linter, de la lista de revisión y de una segunda revisión hecha con IA,
   cada uno clasificado como real o falso positivo después de verificarlo en el código.
