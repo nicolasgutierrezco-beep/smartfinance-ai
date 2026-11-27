@@ -186,92 +186,87 @@ Asistente usado: Claude (modo chat y agente, trabajando sobre el repositorio)
 
 ## Entradas de la semana 7 (pruebas con IA)
 
-### Entrada 12
+### Nota de corrección sobre las entradas 12 a 14
 
-- **Fecha:** 2026-11-22
-- **Prompt o sugerencia:** Diseño de casos. Prompt: «Te paso las reglas de HU-02, HU-03,
-  HU-04 y HU-06 tal como están en los escenarios Gherkin. Para cada función propone casos
-  con particiones de equivalencia (incluidas las inválidas), valores límite (el último
-  valor de una partición y el primero de la siguiente) y, para las que combinan
-  condiciones, una tabla de decisión. Si la regla no alcanza para decidir un esperado,
-  márcalo como ambigüedad en vez de inventarlo». También propuso agregar las funciones
-  de deudas y recomendaciones, porque el proyecto solo tenía una función con reglas.
+Las entradas 12 a 14 se redactaron con apoyo de la IA, y algunas frases no dejan claro
+quién hizo cada parte. Las aclaro aquí:
+
+- Entrada 12: la revisión de los casos con las cinco preguntas la propuso la IA y yo la
+  acepté.
+- Entrada 13: la revisión de las pruebas con las tres preguntas también la propuso la IA;
+  yo revisé sus cambios y los acepté.
+- Entrada 14: las sumas de los datos las calculó la IA al preparar el fixture. En la
+  versión simple yo comprobé a mano la suma del ocio ($121.900). El total de deudas ya no
+  existe en el código.
+
+Dejo esas entradas como estaban y aclaro aquí cómo se repartió el trabajo.
+
+### Entrada 16
+
+- **Fecha:** (fecha de hoy)
+- **Prompt o sugerencia:** Le pedí a la IA simplificar el código de la semana 7 para que
+  fuera fácil de explicar, solo con lo que pide la rúbrica: tres funciones con reglas y una
+  con tabla de decisión. Como sé poco de programación, le pedí que me diera el código y lo
+  escribí yo a mano en VS Code.
+- **Decisión:** Aceptada
+- **Por qué:** La versión anterior tenía unas 1.000 líneas y no podía explicarla. La simple
+  tiene unas 185: validar_fecha_vencimiento, evaluar_gasto_ocio y las pruebas.
+- **Verificación:** Corrí pytest después de cada archivo. Fallaron 4 pruebas de
+  recomendaciones porque escribí el tope con un cero de más (1.000.000 en vez de 100.000).
+  Revisé la regla de HU-02 y corregí el número. Al final pasaron las 35 pruebas y ruff no
+  marcó avisos.
+- **Commit relacionado:** (hash) a (hash), en la rama simplificacion-semana-7
+
+### Entrada 17
+
+- **Fecha:** (fecha de hoy)
+- **Prompt o sugerencia:** La IA me propuso cuatro errores para meter a propósito en el
+  código y me explicó cómo hacerlo uno a la vez.
+- **Decisión:** Aceptada
+- **Por qué:** Esta vez quería hacer yo la prueba de romper el código, no un script.
+- **Verificación:** Hice los cuatro cambios a mano, corrí pytest y deshice cada uno con
+  git restore. Los errores 1, 2 y 3 los detectaron las pruebas. En el 4 no falló ninguna,
+  y entendí que es un mutante equivalente: con el gasto igual al tope las dos versiones
+  devuelven 0. Los resultados están en la sección 3 del registro.
+- **Commit relacionado:** (hash)
+
+### Entrada 18
+
+- **Fecha:** (fecha de hoy)
+- **Prompt o sugerencia:** Le pedí a la IA ideas y borradores para reescribir las secciones
+  del registro de pruebas con la versión simple.
 - **Decisión:** Aceptada con cambios
-- **Por qué:** Revisé la propuesta con las cinco preguntas. Particiones y límites estaban
-  completos para HU-03 y HU-04. El origen del esperado falló en un punto: el escenario 1 de
-  HU-02 pide reducir $30.000 con un exceso de $20.000, y ese número no sale de ningún dato
-  del escenario (ambigüedad A-04). Se registraron 7 ambigüedades con su decisión; A-01,
-  A-02 y A-04 quedan para confirmar con el docente. Ninguna regla inventada pasó a la
-  tabla: la regla de «monto positivo» de HU-07 no se aplicó a las deudas (A-07).
-- **Verificación:** Cada esperado de la tabla se calculó a mano a partir del texto de la
-  regla, antes de escribir las pruebas. Las tablas están en `registro_pruebas.md`,
-  sección 1, con la prueba que cubre cada fila.
-- **Commit relacionado:** `5594799` (reglas y ambigüedades) y `2ac3808` (tablas completas)
+- **Por qué:** Usé los borradores como base y los ajusté. Al correr pytest -v vi que dos
+  pruebas tenían otro nombre (test_meses_validos[28-esperado0] y [31-esperado1]) y lo
+  corregí en la tabla.
+- **Verificación:** Revisé con pytest -v que los nombres de la tabla coincidieran con las
+  pruebas reales y repasé las pruebas nuevas con las tres preguntas.
+- **Commit relacionado:** (hash) a (hash)
 
-### Entrada 13
+### Entrada 19
 
-- **Fecha:** 2026-11-22
-- **Prompt o sugerencia:** Generación de pruebas. Prompt: «Con estas reglas y estas tablas
-  de casos, escribe pruebas con pytest. Usa `@pytest.mark.parametrize` con un comentario por
-  fila, `pytest.approx` para decimales, `pytest.raises` con el tipo de error exacto y
-  esperados fijos. No modifiques el código». La IA entregó 25 pruebas; 3 fallaron.
+- **Fecha:** (fecha de hoy)
+- **Prompt o sugerencia:** Le pedí a la IA analizar un documento con recomendaciones para
+  bajar la apariencia de texto generado por IA en el repositorio.
 - **Decisión:** Aceptada con cambios
-- **Por qué:** Los 3 fallos se revisaron contra la regla antes de tocar nada, y en los tres
-  el error estaba en la prueba: un esperado que contradecía «posterior» (A-01), una regla
-  inventada para deudas en cero, y los $30.000 copiados del Gherkin sin hacer la cuenta.
-  Entre las que pasaban había asserts débiles (`is not None`, `isinstance`, un `assert`
-  sobre un texto cualquiera), un esperado recalculado con el mismo `sum` que el código y
-  `pytest.raises(ValueError)` que también aceptaba el error equivocado. `pytest.approx`
-  se cambió por igualdad exacta porque los montos son `Decimal` en pesos.
-- **Verificación:** Cada prueba pasó por las tres preguntas; el detalle de cada decisión
-  está en `registro_pruebas.md`, sección 2. `git diff main -- tests/test_presupuesto.py`
-  sale vacío: las 15 pruebas anteriores no se tocaron. Resultado: 72 pruebas en verde y
-  `ruff check .` sin avisos.
-- **Commit relacionado:** `2e56a35` (borrador tal como lo dio la IA) y `f1b03c4` (revisión)
-
-### Entrada 14
-
-- **Fecha:** 2026-11-22
-- **Prompt o sugerencia:** Datos sintéticos. Prompt: «Genera gastos y deudas de un mes de
-  una persona inventada que vive en Neiva, en pesos colombianos, sin nombres reales ni
-  marcas, e incluye casos difíciles: tildes, ñ, apóstrofo, texto vacío, espacios sobrantes
-  y montos en cero. Escribe en el docstring cuánto suma cada grupo».
-- **Decisión:** Aceptada con cambios
-- **Por qué:** Los datos tienen contexto local (achiras, tejo, mototaxi, natillera) y los
-  casos pedidos. No se agregaron teléfonos porque el modelo de datos no tiene ese campo.
-  Se dejaron «cine» y «streaming» genéricos, sin marca.
-- **Verificación:** Sumé a mano el ocio ($121.900) y las deudas pendientes ($630.000); las
-  pruebas fijan esos números. La prueba de la alerta con la «Cooperativa Ñambú» comprueba
-  que la ñ llega intacta al mensaje y que se recortan los espacios sobrantes.
-- **Commit relacionado:** `e56dca9`
-
-### Entrada 15
-
-- **Fecha:** 2026-11-22
-- **Prompt o sugerencia:** Romper el código a propósito. El asistente corrió una primera
-  ronda de 10 mutaciones con un script que cambiaba el archivo, corría `pytest` y hacía
-  `git restore`.
-- **Decisión:** Rechazada (la primera ronda) y repetida
-- **Por qué:** Los resultados no cuadraban: M2 fallaba en las mismas pruebas que M1, y al
-  quitar una validación de `recomendaciones.py` fallaban pruebas del presupuesto. La causa
-  era la caché de Python: el cambio y el `git restore` caían en el mismo segundo con el
-  mismo tamaño, y Python seguía usando el archivo roto ya compilado. Se repitió con
-  `PYTHONDONTWRITEBYTECODE=1` y sin caché de pytest.
-- **Verificación:** En la segunda ronda cada mutación falló solo en las pruebas de su
-  función. M9 y M10 sobrevivieron (72 en verde) y se agregaron los casos que faltaban;
-  repetidas, ya fallan. Total final: 76 pruebas en verde. Detalle en `registro_pruebas.md`,
-  sección 3.
-- **Commit relacionado:** `1d69bcf`
+- **Por qué:** Acepté lo que aumentaba mi trabajo real: rehacer yo las pruebas de romper el
+  código, simplificar lo que no entendía y hacer yo los commits. No acepté las partes que
+  solo servían para disimular, como cambiar los símbolos del texto o reescribir para que
+  sonara a mí sin haberlo escrito yo. Prefiero que se vea lo que hizo la IA y lo que hice yo.
+- **Verificación:** Los cambios quedaron en commits hechos por mí en la rama
+  simplificacion-semana-7, y la corrección de las entradas 12 a 14 está en la nota de arriba.
+- **Commit relacionado:** este commit de la bitácora
 
 ## Resumen
 
 | Decisión | Cantidad |
 |---|---|
-| Aceptadas | 3 |
-| Aceptadas con cambios | 7 |
+| Aceptadas | 5 |
+| Aceptadas con cambios | 9 |
 | Rechazadas | 5 |
 
 Semana 5: entradas 1 a 7. Semana 6: entradas 8 a 11. Semana 7: entradas 12 a 15.
+Simplificación: entradas 16 a 19.
 
 ## Errores que atraparon las pruebas
 
