@@ -103,3 +103,38 @@ en las secciones 7 y 8 del [documento de las semanas 1 a 4](docs/documento_seman
   [2e56a35](https://github.com/nicolasgutierrezco-beep/smartfinance-ai/commit/2e56a35).
   Corrección: [f1b03c4](https://github.com/nicolasgutierrezco-beep/smartfinance-ai/commit/f1b03c4).
   Hoy está en la prueba test_tabla_de_decision[120000-20000].
+
+  ## 5. Estado final del sistema
+
+- **Arquitectura:** el diseño escogido en el ADR-001 es un backend en FastAPI con una cola
+  de tareas (Redis y Celery) para que la app responda rápido, la API de un LLM para
+  entender las frases de los gastos y PostgreSQL con cifrado para guardar los datos. Está
+  en las secciones 16 y 17 del [documento de las semanas 1 a 4](docs/documento_semanas_1_a_4.pdf).
+  Lo que está programado hasta ahora es la lógica de negocio, en Python, sin esas piezas
+  externas: tres funciones en [src/smartfinance](src/smartfinance).
+
+- **Funcionalidades terminadas:** de las cuatro historias Must:
+
+| Historia | Estado | Qué hay en el código |
+|---|---|---|
+| HU-01. Registrar gastos en lenguaje natural | No empezada | Necesita la API del LLM |
+| HU-02. Recomendaciones de ahorro | Parcial | evaluar_gasto_ocio calcula cuánto recortar si el ocio pasa el tope. Falta que el LLM redacte la recomendación |
+| HU-03. Alertas de vencimiento de deudas | Parcial | validar_fecha_vencimiento rechaza fechas de hoy o anteriores. Falta enviar las alertas |
+| HU-04. Límite de gasto diario | Terminada en la lógica | calcular_limite_diario hace el cálculo completo con sus validaciones. Falta guardarlo y mostrarlo en una pantalla |
+
+- **Pruebas:** 35 pruebas con pytest, todas en verde: 15 de las semanas 5 y 6 y 20 de la
+  versión simplificada. Cubren la lógica de negocio de las tres funciones: los casos
+  normales, los valores límite (por ejemplo, hoy y mañana en las fechas, o 4 y 5
+  transacciones en el ocio) y los errores. La tabla de casos de cada función está en
+  [registro_pruebas.md](registro_pruebas.md). No medí la cobertura con un porcentaje.
+  El pipeline de GitHub Actions corre ruff y las pruebas en cada push:
+  [última ejecución](https://github.com/nicolasgutierrezco-beep/smartfinance-ai/actions/runs/45973174055).
+
+- **Pendientes:**
+  - La API con FastAPI, la cola, la base de datos y la conexión con el LLM. No alcanzaron
+    porque el seminario se centró en la lógica, las pruebas y la revisión del código.
+  - Las alertas de vencimiento y marcar deudas como pagadas (HU-06). Estuvieron programadas
+    en la semana 7, pero las quité al simplificar porque no las pedía la rúbrica y no
+    podía explicarlas bien.
+  - Confirmar con el profesor las dudas A-01 (si una deuda que vence hoy es válida) y
+    A-04 (los $30.000 frente a $20.000).
