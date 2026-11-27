@@ -1,0 +1,30 @@
+# Corre el linter y las pruebas cada vez que se suben cambios a GitHub.
+name: Pruebas
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  pruebas:
+    runs-on: ubuntu-latest
+    steps:
+      # Descarga el código del repositorio.
+      - uses: actions/checkout@v4
+
+      # Instala Python.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Instala pytest y ruff con versión fija.
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt ruff==0.17.6
+
+      # Revisa el estilo y la seguridad del código.
+      - name: Linter
+        run: ruff check .
+
+      # Corre las 35 pruebas.
+      - name: Pruebas
+        run: pytest -v
