@@ -7,7 +7,16 @@ Fecha: 2026-11-27
 
 ## 1. Resumen
 
-(esta al final.)
+Las personas que manejan sus finanzas solas dejan de anotar sus gastos porque las apps son
+tediosas, y se enteran a fin de mes de que gastaron de más o de que se les pasó una fecha
+de pago. SmartFinance AI propone una app que entiende los gastos escritos en frases
+normales, calcula cuánto se puede gastar al día y avisa antes de que algo salga mal.
+Usé IA en las seis fases del proyecto: Gemini Notebook para la propuesta, los requisitos y
+el diseño, y Claude para el código, las pruebas y el pipeline. Hoy están programadas tres
+funciones de la lógica de negocio, con 35 pruebas que pasan y un pipeline que las corre en
+cada cambio. Al verificar encontré errores de la IA en todas las fases, como un módulo de
+criptomonedas que nadie pidió o una prueba que esperaba $30.000 cuando la cuenta daba
+$20.000.
 
 ## 2. Problema y usuario
 
@@ -148,6 +157,7 @@ en las secciones 7 y 8 del [documento de las semanas 1 a 4](docs/documento_seman
 | Transparencia | Anoté cada uso de IA en la bitácora con su prompt, su resultado y cómo lo verifiqué. Cuando vi que unas entradas no dejaban claro quién hizo qué, agregué una nota de corrección en lugar de borrarlas. Y decidí no disimular el texto generado por IA | [bitacora_ia.md](bitacora_ia.md), entradas 1 a 19 y la nota de corrección; sección "Uso de IA" del [README](README.md) |
 | Responsabilidad | Lo que entrego es mi responsabilidad, aunque lo haya propuesto la IA. Por eso las reglas de las historias, y no la IA, deciden qué espera cada prueba; simplifiqué el código cuando no podía explicarlo; rompí el código a mano para comprobar las pruebas; y el pipeline revisa cada cambio que subo | Secciones 1 y 3 de [registro_pruebas.md](registro_pruebas.md), [pruebas.yml](.github/workflows/pruebas.yml) y entradas 16 a 19 de la [bitácora](bitacora_ia.md) |
 | Propiedad intelectual y política de uso | Usé IA como lo permite el seminario: declarando en cada entrega qué herramienta usé y para qué. No copié código de otros proyectos. Las dos herramientas que usa el proyecto, pytest y ruff, son de código abierto. El README declara la licencia MIT para mi código | Sección "Uso de IA" y sección 8 del [README](README.md), [requirements.txt](requirements.txt) |
+
 El dilema más importante llegó al final del proyecto. Un análisis de mi repositorio
 estimó que entre el 85 y el 90 % del contenido parecía escrito por IA, y encontré un
 documento con recomendaciones para bajar esa apariencia: cambiar los símbolos que suele
@@ -159,3 +169,37 @@ segundo. Simplifiqué el código hasta poder explicarlo, lo escribí a mano, rom
 yo mismo para comprobar las pruebas y agregué una nota en la bitácora aclarando qué
 entradas había redactado la IA. Lo decidí porque el seminario permite usar IA siempre que
 se declare, y disimularlo habría convertido una herramienta permitida en un engaño.
+
+## 7. Aprendizajes
+
+**Qué sé hacer ahora.** Al empezar nunca había usado Git. Ahora sé crear ramas, hacer
+commits con mensajes claros, unir una rama a main, subir cambios a GitHub y deshacer un
+cambio con git restore. También aprendí a preparar un entorno de Python, a correr pruebas
+con pytest y a leer cuando una falla. Entendí qué son las particiones de equivalencia, los
+valores límite y las tablas de decisión, y para qué sirve romper el código a propósito: en
+el error 4 aprendí qué es un mutante equivalente. Y armé un pipeline que revisa el código
+cada vez que subo cambios. Me costo mucho el poder entender algunas clases ya que sentia que
+veia cosas que estaban algo avanzadas para mi.
+
+**En qué confié de más en la IA.** Acepté código que crecía mucho sin entenderlo: la
+versión de la semana 7 llegó a unas 1.000 líneas que no podía explicar. También dejé que
+la IA redactara entradas de la bitácora en primera persona sin revisar que cada frase
+fuera cierta, y por eso tuve que agregar una nota de corrección. En las fases de
+requisitos y diseño, la IA inventó un módulo de criptomonedas, se equivocó en el
+porcentaje de historias Must y omitió la cola en un diagrama; lo encontré revisando,
+pero muestra que no se le puede creer del todo a la IA.
+
+**Qué haría distinto.** Pediría a la IA que me explicara cada parte del código antes de
+aceptarlo, y lo mantendría simple desde el principio. Leería todo lo que la IA escribe a
+mi nombre antes de guardarlo. Haría yo los commits a medida que trabajo, para que el
+historial muestre mi proceso real. Y preguntaría las dudas de las reglas, como la de los
+$30.000, al profesor apenas aparecen.
+
+## 8. Anexos
+
+- Bitácora de uso de IA: [bitacora_ia.md](bitacora_ia.md)
+- Documentos de cada módulo:
+  - Módulos 1 a 3 (fundamentos, requisitos y diseño): [documento de las semanas 1 a 4](docs/documento_semanas_1_a_4.pdf)
+  - Módulo 4 (código y revisión): [presupuesto.py](src/smartfinance/presupuesto.py), [revision_seguridad.md](revision_seguridad.md) y [README](README.md)
+  - Módulo 5 (pruebas): [registro_pruebas.md](registro_pruebas.md) y la carpeta [tests](tests)
+  - Módulo 6 (operación): [pruebas.yml](.github/workflows/pruebas.yml) y la pestaña Actions del repositorio
