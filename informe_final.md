@@ -138,3 +138,13 @@ en las secciones 7 y 8 del [documento de las semanas 1 a 4](docs/documento_seman
     podía explicarlas bien.
   - Confirmar con el profesor las dudas A-01 (si una deuda que vence hoy es válida) y
     A-04 (los $30.000 frente a $20.000).
+
+## 6. Reflexión ética y legal
+
+| Principio | Decisión en mi proyecto | Evidencia |
+|---|---|---|
+| Datos personales (Ley 1581 de 2012) | En las pruebas solo usé datos inventados, sin nombres, cédulas, correos ni teléfonos de personas reales. El cliente de la entrevista dio permiso para grabarla y procesarla con IA. En el diseño, los datos se guardan cifrados (AES-256) y las claves no se suben al repositorio | [conftest.py](tests/conftest.py), sección 4 de [registro_pruebas.md](registro_pruebas.md), [.env.example](.env.example) y la sección 7.3 del [documento de las semanas 1 a 4](docs/documento_semanas_1_a_4.pdf) |
+| Sesgo | La app va a recibir frases en español colombiano, con palabras como "lucas" o "súper", que un LLM podría entender mal. Por eso los datos de prueba tienen contexto local (gastos de Neiva) y casos con tildes, ñ y apóstrofos. Como el LLM todavía no está conectado, probar sus sesgos queda pendiente | Sección 4 de [registro_pruebas.md](registro_pruebas.md) y sección 2.2 del [documento de las semanas 1 a 4](docs/documento_semanas_1_a_4.pdf) |
+| Transparencia | Anoté cada uso de IA en la bitácora con su prompt, su resultado y cómo lo verifiqué. Cuando vi que unas entradas no dejaban claro quién hizo qué, agregué una nota de corrección en lugar de borrarlas. Y decidí no disimular el texto generado por IA | [bitacora_ia.md](bitacora_ia.md), entradas 1 a 19 y la nota de corrección; sección "Uso de IA" del [README](README.md) |
+| Responsabilidad | Lo que entrego es mi responsabilidad, aunque lo haya propuesto la IA. Por eso las reglas de las historias, y no la IA, deciden qué espera cada prueba; simplifiqué el código cuando no podía explicarlo; rompí el código a mano para comprobar las pruebas; y el pipeline revisa cada cambio que subo | Secciones 1 y 3 de [registro_pruebas.md](registro_pruebas.md), [pruebas.yml](.github/workflows/pruebas.yml) y entradas 16 a 19 de la [bitácora](bitacora_ia.md) |
+| Propiedad intelectual y política de uso | Usé IA como lo permite el seminario: declarando en cada entrega qué herramienta usé y para qué. No copié código de otros proyectos. Las dos herramientas que usa el proyecto, pytest y ruff, son de código abierto. El README declara la licencia MIT para mi código | Sección "Uso de IA" y sección 8 del [README](README.md), [requirements.txt](requirements.txt) |
