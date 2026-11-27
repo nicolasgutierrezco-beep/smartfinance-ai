@@ -203,11 +203,11 @@ Dejo esas entradas como estaban y aclaro aquí cómo se repartió el trabajo.
 
 ### Entrada 16
 
-- **Fecha:** (fecha de hoy)
+- **Fecha:** (27/11/26)
 - **Prompt o sugerencia:** Le pedí a la IA simplificar el código de la semana 7 para que
   fuera fácil de explicar, solo con lo que pide la rúbrica: tres funciones con reglas y una
-  con tabla de decisión. Como sé poco de programación, le pedí que me diera el código y lo
-  escribí yo a mano en VS Code.
+  con tabla de decisión. Le pedí que me diera el código y lo escribí yo a mano en VS Code,
+  para ir entendiendo cada parte mientras lo escribía.
 - **Decisión:** Aceptada
 - **Por qué:** La versión anterior tenía unas 1.000 líneas y no podía explicarla. La simple
   tiene unas 185: validar_fecha_vencimiento, evaluar_gasto_ocio y las pruebas.
@@ -219,7 +219,7 @@ Dejo esas entradas como estaban y aclaro aquí cómo se repartió el trabajo.
 
 ### Entrada 17
 
-- **Fecha:** (fecha de hoy)
+- **Fecha:** (27/11/26)
 - **Prompt o sugerencia:** La IA me propuso cuatro errores para meter a propósito en el
   código y me explicó cómo hacerlo uno a la vez.
 - **Decisión:** Aceptada
@@ -232,7 +232,7 @@ Dejo esas entradas como estaban y aclaro aquí cómo se repartió el trabajo.
 
 ### Entrada 18
 
-- **Fecha:** (fecha de hoy)
+- **Fecha:** (27/11/26)
 - **Prompt o sugerencia:** Le pedí a la IA ideas y borradores para reescribir las secciones
   del registro de pruebas con la versión simple.
 - **Decisión:** Aceptada con cambios
