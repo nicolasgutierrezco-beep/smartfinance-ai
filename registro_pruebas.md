@@ -99,39 +99,41 @@ al simplificar el código.
 
 ## 2. Pruebas de la IA descartadas o corregidas
 
-**Prompt usado:** «Eres un tester de Python. Con estas reglas y estas tablas de casos
-[se pegaron las secciones de la regla 1 a la 5], escribe pruebas con pytest para
-`deudas.py`, `recomendaciones.py` y los límites de `calcular_limite_diario`. Usa
-`@pytest.mark.parametrize` con un comentario por fila, `pytest.approx` para decimales,
-`pytest.raises` con el tipo de error exacto y esperados fijos. No modifiques el código».
-Ver bitácora, entrada 13. El borrador quedó en el commit
-`Borrador de pruebas generado por IA, sin revisar`: 25 pruebas nuevas, 3 en rojo.
+Las pruebas pasaron por dos momentos.
+
+Primera versión. Le pedí a la IA un borrador de pruebas con pytest a partir de las reglas
+y las tablas, usando parametrize, pytest.raises con el tipo de error y esperados fijos.
+Entregó 25 pruebas y 3 fallaron. Antes de tocar las pruebas que fallaron se revisó la
+regla, y en las tres el error estaba en la prueba, no en el código. La IA también propuso
+la revisión del resto del borrador con las tres preguntas (¿el esperado sale de la regla?,
+¿fallaría si rompo el código?, ¿cubre algo que otra no cubre?) y yo acepté sus cambios.
+
+Segunda versión. La primera versión terminó con 76 pruebas y mucho código difícil de
+explicar. Decidí simplificarla y quedarme solo con lo que pide la tarea: tres funciones
+con reglas, una con tabla de decisión. Quité las pruebas de funciones que ya no existen
+y las de tipos inválidos. Quedaron 35 pruebas (20 nuevas y las 15 de las semanas 5 y 6).
 
 | Prueba generada | Decisión | Por qué | En su lugar |
 |---|---|---|---|
-| `test_fecha_hoy_es_valida`: esperaba que vencer hoy no diera error | Corregida | **El esperado no sale de la regla.** Falló, y antes de tocarla se releyó la regla: «posterior» es estricto (A-01). | Fila `fecha_no_posterior[hoy]`: espera FechaVencimientoInvalidaError |
-| `test_deuda_con_monto_cero_lanza_error` | Descartada | **Regla inventada.** Tomó «monto positivo» de HU-07, que habla de la meta de ahorro, y la aplicó a las deudas. | `test_deuda_en_cero_es_valida` (A-07) |
-| `test_escenario_gherkin_recomienda_reducir`: esperaba $30.000 | Corregida | **El esperado no sale de la regla revisada.** Copió el número del Gherkin sin hacer la cuenta; la tabla ya había resuelto A-04. | `ocio_tabla[R3-escenario-HU02]` con $20.000 |
-| `test_alerta_dos_dias_antes`: `assert alerta is not None` | Corregida | **Débil.** Pasaba con cualquier texto, incluso con un monto o un número de días equivocado. | Compara el mensaje exacto del Gherkin: `alerta_tabla[R2-faltan-2]` |
-| `test_sin_alerta_si_falta_mucho[faltan 7 días]` | Descartada | **Redundante.** Misma partición que «faltan 3», que además es el límite. | Solo queda `alerta_tabla[R1-faltan-3]` |
-| Faltaban 1 día, el mismo día, vencida y estado inválido | Agregadas | La tabla de decisión tenía 6 filas y el borrador cubría 3. | `alerta_tabla[R3]`, `[R4]`, `[R5]` |
-| `test_marcar_como_pagada_devuelve_deuda`: `isinstance(…, Deuda)` | Corregida | **Débil.** Pasaba aunque devolviera la deuda sin cambiar (se confirmó con M6). | Revisa estado, acreedor, monto y que la original siga pendiente |
-| `test_pagar_dos_veces_lanza_error` | Corregida | Revisaba el tipo pero no el mensaje, que es parte de la regla. | Agrega `match=` con el texto exacto |
-| `test_total_pendiente`: el esperado se calculaba con un `sum(...)` igual al del código | Corregida | **El esperado salía del código.** Si el filtro estuviera mal en los dos lados, la prueba pasaría igual. | Esperado fijo 630.000, calculado a mano |
-| `test_historial_insuficiente`: `pytest.raises(ValueError)` | Corregida | **Débil.** MontoInvalidoError también es un ValueError, así que pasaba con el error equivocado. | `HistorialInsuficienteError` y el texto exacto |
-| `test_sin_recomendacion_si_no_supera[50.000]` y `[80.000]` | Descartadas | **Redundantes** con 99.999: misma partición, y 99.999 además es el límite. | Queda 99.999 (límite); se agrega 100.000 (A-05) y 100.001 |
-| `test_con_datos_sinteticos`: `assert evaluar_gasto_ocio(...)` | Corregida | **Débil.** Cualquier texto no vacío la hacía pasar. | Mensaje exacto con $21.900, calculado a mano |
-| `test_limite_valido` con `pytest.approx` | Corregida | El prompt pidió `approx` para decimales, pero aquí los montos son `Decimal` exactos en pesos, no `float`. `approx` deja pasar diferencias pequeñas que en plata sí importan. | Igualdad exacta con `==` |
-| `test_limite_valido[meta = disponible]` | Descartada | **Redundante** con `test_meta_igual_a_la_disponibilidad_deja_el_cupo_en_cero` (S5). | Se cita esa prueba en la tabla |
-| `test_dias_fuera_de_rango`: `pytest.raises(ValueError)` | Corregida | `pytest.raises` acepta subclases: no distingue ValueError de MontoInvalidoError. | `assert excinfo.type is error` |
-| `test_fecha_pasada_lanza_error`, `test_fecha_futura_es_valida`, `test_sin_alerta_si_falta_mucho[faltan 3]`, `test_deuda_pagada_no_genera_alerta`, `test_sin_recomendacion_si_no_supera[99.999]`, `test_meta_un_peso_mayor_que_disponible` | Conservadas | El esperado sale de la regla, fallan si se rompe el código y cubren algo único. | Se pasaron a la tabla parametrizada con su comentario |
+| test_fecha_hoy_es_valida: esperaba que una deuda que vence hoy se aceptara | Corregida | Falló, y al revisar la regla vi que dice "posterior a la fecha actual", así que hoy no vale (A-01) | test_fecha_de_hoy_o_anterior_da_error[fecha2] |
+| test_escenario_gherkin_recomienda_reducir: esperaba $30.000 | Corregida | Falló. Copiaba el número de la historia, pero $120.000 - $100.000 da $20.000 (A-04) | test_tabla_de_decision[120000-20000] |
+| test_deuda_con_monto_cero_lanza_error | Descartada | Falló. Usaba la regla de "monto positivo" de HU-07, que es para la meta de ahorro y no para deudas. Era una regla inventada | Nada, la clase Deuda ya no existe |
+| test_historial_insuficiente con pytest.raises(ValueError) sin mensaje | Corregida | Pasaba con cualquier ValueError, aunque fuera otro error | test_pocas_transacciones_da_error, que revisa también el mensaje de la regla |
+| test_sin_recomendacion_si_no_supera con 50.000 y 80.000 | Descartadas | Redundantes: están en la misma partición que 99.999, que además es el límite | test_tabla_de_decision[99999-0] |
+| test_con_datos_sinteticos: solo revisaba que hubiera alguna respuesta | Corregida | Era débil: pasaba con cualquier resultado | test_con_los_gastos_del_mes, con el esperado fijo 21.900 calculado a mano |
+| test_total_pendiente: calculaba el esperado con la misma suma que el código | Descartada | El esperado salía del código y no de la regla. Además, la función se quitó al simplificar | Nada |
+| Pruebas de alertas, pagos de deudas y tipos inválidos (versión de 76 pruebas) | Descartadas al simplificar | Probaban funciones que quité porque no las pide la rúbrica y eran difíciles de explicar | Nada |
 
-**Resumen:** la mayoría de las pruebas del borrador corrían, pero muchas comprobaban
-poco: cuatro asserts débiles, un error sin su mensaje, dos errores capturados sin tipo
-exacto, un esperado copiado del propio código y cuatro casos redundantes. Además faltaban límites, tipos inválidos y la
-mitad de las filas de las tablas de decisión, que se agregaron hasta llegar a 61 pruebas
-nuevas. Ninguna prueba se ajustó al código: los 3 fallos del borrador se resolvieron
-releyendo la regla.
+Las 20 pruebas nuevas las revisé con las mismas tres preguntas. Todos los esperados salen
+de las reglas de la sección 1 o de cuentas hechas a mano. Las pruebas sí fallan cuando
+se rompe el código, como se ve en la sección 3. Y cada prueba cubre una partición o un
+límite distinto; por ejemplo, la de 2 transacciones es el escenario de la historia y la
+de 4 es el último valor antes del mínimo.
+
+Un detalle: en la primera versión se cambió pytest.approx por igualdad exacta porque los
+montos eran Decimal. En la versión simple los montos son números normales, así que usé
+pytest.approx en la tabla de decisión, como pide la tarea para los decimales (por ejemplo,
+la fila de 100.000,50).
 
 ## 3. Romper el código a propósito
 
