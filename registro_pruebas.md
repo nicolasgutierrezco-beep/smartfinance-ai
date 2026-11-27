@@ -4,267 +4,191 @@ Proyecto: SmartFinance AI
 Estudiante: Nicolás Andrés Gutiérrez Collazos
 Fecha: 2026-11-22
 
-Funciones probadas: cinco con reglas de negocio (cálculo, validación, estados) y dos que
-combinan condiciones con tabla de decisión: `generar_alerta_vencimiento` y
-`evaluar_gasto_ocio`. Total: **76 pruebas** con `pytest -v`, todas en verde. Las 15 de
-`tests/test_presupuesto.py` (semanas 5 y 6) no se tocaron.
-
-Los nombres de las pruebas se abrevian así: `fecha_no_posterior[hoy]` es
-`tests/test_deudas.py::test_fecha_no_posterior_a_hoy_se_rechaza[hoy]`.
+En esta versión simplifiqué el código para que fuera fácil de explicar. Probé tres
+funciones con reglas de negocio: calcular_limite_diario (HU-04),
+validar_fecha_vencimiento (HU-03) y evaluar_gasto_ocio (HU-02). La última combina
+varias condiciones, por eso tiene tabla de decisión. En total son 35 pruebas y todas
+pasan con pytest -v. Las 15 pruebas de tests/test_presupuesto.py son de las semanas 5
+y 6 y no las cambié.
 
 ## 1. Tabla de casos
 
-### Regla 1: `calcular_limite_diario` (HU-04)
+### Regla 1: calcular_limite_diario (HU-04)
 
-**Regla completa (el oráculo):** HU-04: «Dado que el usuario fija una meta de ahorro de
-$300.000 COP para un mes de 30 días, con ingresos de $1.500.000 COP, entonces asigna un
-margen máximo de gasto de $40.000 COP diarios». Escenario 2: «La meta supera tu
-disponibilidad mensual ($100.000 COP máximo)». HU-07, escenario 2: el valor debe ser un
-monto positivo. La fórmula acordada en la semana 5: (ingresos − gastos fijos − meta −
-gastado) ÷ días que faltan contando hoy, en pesos enteros hacia abajo, nunca negativo. Un
-mes tiene de 28 a 31 días.
-
-Particiones y límites nuevos (en `tests/test_presupuesto_tabla.py`). Los casos que ya
-cubrían las 15 pruebas anteriores no se repiten; se citan con su nombre.
-
-| Técnica | Partición o límite | Entrada (sobre ingresos 3.000.000, mes de 30) | Esperado | Prueba que lo cubre |
-|---|---|---|---|---|
-| Partición válida | Caso normal de la historia | 1.500.000, meta 300.000, 30 días | 40.000 | `test_escenario_de_la_historia_da_cuarenta_mil_diarios` (S5) |
-| Límite | Último inválido por debajo | dias_del_mes 27 | ValueError | `limites[mes-27]` |
-| Límite | Primer válido | dias_del_mes 28 | 107.142 | `limites_validos[mes-28]` |
-| Límite | Último válido | dias_del_mes 31 | 96.774 | `limites_validos[mes-31]` |
-| Límite | Primer inválido por encima | dias_del_mes 32 | ValueError | `limites[mes-32]` |
-| Límite | Día anterior al primero | dia_actual 0 | ValueError | `limites[dia-0]` |
-| Límite | Primer día | dia_actual 1 | 100.000 | `limites_validos[dia-1]` |
-| Límite | Día después del último | dia 31 en mes de 30 | ValueError | `test_un_dia_que_no_existe_en_ese_mes_se_rechaza` (S5) |
-| Límite | Meta igual a lo disponible | fijos 400.000, meta 600.000 (sobre 1.000.000) | 0 | `test_meta_igual_a_la_disponibilidad_deja_el_cupo_en_cero` (S5) |
-| Límite | Meta un peso por encima | fijos 400.000, meta 2.600.001 | MetaInalcanzableError | `limites[meta-mas-1]` |
-| Límite | Fijos iguales a ingresos | fijos 3.000.000 | 0 | `limites_validos[fijos-igual-ingresos]` |
-| Límite | Fijos un peso por encima | fijos 3.000.001 | GastosSuperanIngresosError | `limites[fijos-mas-1]` |
-| Límite | Gastado igual al saldo | día 30, gastado 3.000.000 | 0 | `limites_validos[gastado-igual-saldo]` |
-| Límite | Un peso antes del borde | día 30, gastado 2.999.999 | 1 | `limites_validos[gastado-un-peso-menos]` |
-| Partición válida | Todo en cero | ingresos 0 | 0 | `limites_validos[ingresos-cero]` |
-| Partición inválida | Monto negativo (cada uno) | ingresos, fijos o gastado en −1 | MontoInvalidoError | `limites[ingresos-negativos]`, `[fijos-negativos]`, `[gastado-negativo]` |
-| Partición inválida | Monto de tipo texto | meta "300000" | MontoInvalidoError | `limites[meta-texto]` |
-| Partición inválida | Días con decimales | dias_del_mes 30.0 | ValueError | `limites[dias-float]` |
-
-**Ambigüedades encontradas:** Ninguna nueva. Las de esta regla (si hoy cuenta, redondeo,
-negativos) se resolvieron en la semana 5 y están en la bitácora, entradas 2 a 4.
-
-### Regla 2: `validar_fecha_vencimiento` (HU-03, escenario 2)
-
-**Regla completa (el oráculo):** «Dado que el usuario intenta registrar una deuda con
-vencimiento el 10 de octubre de 2026 y hoy es 2 de noviembre de 2026, cuando presiona
-guardar, entonces el sistema muestra "La fecha de vencimiento debe ser posterior a la fecha
-actual"».
-
-| Técnica | Partición o límite | Entrada (hoy = 13/11/2026) | Esperado | Prueba que lo cubre |
-|---|---|---|---|---|
-| Partición inválida | Fecha pasada (escenario tal cual) | 10/10/2026 con hoy 02/11/2026 | FechaVencimientoInvalidaError | `fecha_no_posterior[escenario-HU03]` |
-| Límite | Último día pasado | 12/11/2026 | FechaVencimientoInvalidaError | `fecha_no_posterior[ayer]` |
-| Límite | Hoy (A-01) | 13/11/2026 | FechaVencimientoInvalidaError | `fecha_no_posterior[hoy]` |
-| Límite | Primer día válido | 14/11/2026 | Acepta (None) | `fecha_posterior[manana]` |
-| Partición válida | Futura lejana | 13/11/2027 | Acepta (None) | `fecha_posterior[dentro-de-un-anio]` |
-| Partición inválida | Texto, fecha con hora, nada | "2026-11-15", datetime, None | TypeError | `fecha_de_tipo_invalido[texto]`, `[datetime]`, `[none]` |
-
-**Ambigüedades encontradas:** A-01. ¿Vencer hoy es «posterior a la fecha actual»?
-**Decisión:** no. «Posterior» es estricto, y una deuda que vence hoy ya no se puede
-registrar a tiempo para un aviso. Pendiente de confirmar con el docente.
-
-### Regla 3: `generar_alerta_vencimiento` (HU-03, escenario 1). Combina condiciones.
-
-**Regla completa (el oráculo):** «Dado que la tarjeta de crédito vence el 15 de noviembre
-con un saldo de $200.000 COP y hoy es 13 de noviembre, cuando el agente de backend ejecuta
-su verificación diaria, entonces envía la alerta "Recordatorio: tu tarjeta de crédito por
-$200.000 COP vence en 2 días"». Y HU-06: una deuda pagada ya no es un compromiso.
-
-**Tabla de decisión** (hoy = 13/11/2026, deuda de $200.000):
-
-| Regla | C1: ¿Pendiente? | C2: días que faltan | Acción | Prueba |
-|---|---|---|---|---|
-| R1 | Sí | 3 o más | Sin alerta (None) | `alerta_tabla[R1-faltan-3]` |
-| R2 | Sí | 2 | «… vence en 2 días» | `alerta_tabla[R2-faltan-2]` |
-| R3 | Sí | 1 | «… vence en 1 día» | `alerta_tabla[R3-falta-1]` |
-| R4 | Sí | 0 | «… vence hoy» | `alerta_tabla[R4-hoy]` |
-| R5 | Sí | Negativo (vencida) | Sin alerta (None) | `alerta_tabla[R5-vencida]` |
-| R6 | No (Pagado) | Cualquiera (no importa) | Sin alerta (None) | `alerta_tabla[R6-pagada]` |
-
-R6 está simplificada: si la deuda está pagada, los días no importan, así que las cinco
-combinaciones de «Pagado» se reducen a una fila.
+Regla: el límite diario es (ingresos - gastos fijos - meta de ahorro - lo gastado) dividido
+entre los días que faltan del mes contando hoy. Se redondea hacia abajo al peso y nunca
+es negativo. El mes tiene entre 28 y 31 días. Si la meta es mayor que lo disponible, o
+los gastos fijos son mayores que los ingresos, se avisa con un error. En la historia, con
+ingresos de $1.500.000, meta de $300.000 y un mes de 30 días, el límite es $40.000.
 
 | Técnica | Partición o límite | Entrada | Esperado | Prueba que lo cubre |
 |---|---|---|---|---|
-| Límite | Primer día fuera de la ventana | faltan 3 | None | `alerta_tabla[R1-faltan-3]` |
-| Límite | Primer día dentro | faltan 2 | Mensaje exacto | `alerta_tabla[R2-faltan-2]` |
-| Límite | Último día dentro | faltan 0 | «vence hoy» | `alerta_tabla[R4-hoy]` |
-| Límite | Primer día después | faltan −1 | None | `alerta_tabla[R5-vencida]` |
-| Partición válida | Datos con ñ y espacios sobrantes | Cooperativa Ñambú, faltan 2 | Mensaje con ñ y sin espacios | `test_alerta_con_datos_sinteticos_recorta_espacios_y_conserva_la_enie` |
-| Partición inválida | Estado escrito como texto | estado "Pagado" | ValueError | `test_estado_escrito_como_texto_se_rechaza` |
+| Partición válida | Caso de la historia | 1.500.000, meta 300.000, 30 días | 40.000 | test_escenario_de_la_historia_da_cuarenta_mil_diarios |
+| Límite | Mes de 27 días | 27 días | ValueError | test_meses_invalidos_dan_error[27] |
+| Límite | Mes de 28 días | 3.000.000 en 28 días | 107.142 | test_meses_validos[28-esperado0] |
+| Límite | Mes de 31 días | 3.000.000 en 31 días | 96.774 | test_meses_validos[31-esperado1] |
+| Límite | Mes de 32 días | 32 días | ValueError | test_meses_invalidos_dan_error[32] |
+| Límite | Meta igual a lo disponible | Meta igual a lo que queda | 0 | test_meta_igual_a_la_disponibilidad_deja_el_cupo_en_cero |
+| Límite | Meta un peso por encima | 3.000.000 de ingresos, meta 3.000.001 | MetaInalcanzableError | test_meta_un_peso_mayor_que_lo_disponible |
+| Límite | Gastos fijos un peso por encima | 3.000.000 de ingresos, fijos 3.000.001 | GastosSuperanIngresosError | test_gastos_fijos_un_peso_mayores_que_los_ingresos |
+| Partición inválida | Monto negativo | Un monto en negativo | MontoInvalidoError | test_un_monto_en_negativo_se_rechaza |
+| Partición inválida | Día que no existe | Día 31 en un mes de 30 | ValueError | test_un_dia_que_no_existe_en_ese_mes_se_rechaza |
 
-**Ambigüedades encontradas:**
-- A-02. El escenario solo muestra el aviso a 2 días. ¿Sale solo ese día o también a 1 día
-  y el mismo día? **Decisión:** desde 2 días antes hasta el día del vencimiento, porque
-  el cliente dijo «se me pasan las fechas»; un solo aviso se pierde fácil. En singular
-  «1 día» y «vence hoy» para el día 0. Se relaciona con la pregunta abierta P-02.
-- A-03. ¿Una deuda vencida y sin pagar genera la alerta? **Decisión:** no; la historia
-  habla de un aviso preventivo. El aviso de mora queda como pregunta para el cliente.
+Los esperados de 28 y 31 días los calculé a mano: 3.000.000 / 28 = 107.142,8 y
+3.000.000 / 31 = 96.774,1, redondeados hacia abajo.
 
-### Regla 4: `marcar_como_pagada` y `total_pendiente` (HU-06), y el registro de una `Deuda`
+### Regla 2: validar_fecha_vencimiento (HU-03)
 
-**Regla completa (el oráculo):** «Dado que la deuda "Servicio de Internet" por $80.000 COP
-figura como pendiente, cuando el usuario elige "Marcar como pagado", entonces el estado
-cambia a "Pagado" y el monto se descuenta del total de compromisos del mes». Escenario 2:
-si ya figura como pagada, «Esta deuda ya ha sido saldada previamente». Modelo de datos:
-una deuda tiene acreedor, monto_total, fecha_vencimiento y estado (Pendiente o Pagado).
+Regla: según el escenario 2 de HU-03, la fecha de vencimiento de una deuda nueva debe ser
+posterior a la fecha actual. Si no, se muestra "La fecha de vencimiento debe ser posterior
+a la fecha actual". En las pruebas, hoy es el 13 de noviembre de 2026.
 
 | Técnica | Partición o límite | Entrada | Esperado | Prueba que lo cubre |
 |---|---|---|---|---|
-| Partición válida | Pendiente → Pagado | Internet $80.000 pendiente | Estado Pagado; acreedor y monto iguales; la original sigue pendiente | `test_marcar_como_pagada_cambia_solo_el_estado` |
-| Partición inválida | Ya pagada | Internet $80.000 pagada | DeudaYaPagadaError con el texto exacto | `test_pagar_dos_veces_lanza_deuda_ya_pagada` |
-| Partición válida | Mezcla de estados | 5 deudas sintéticas | 630.000 | `test_total_pendiente_suma_solo_las_pendientes` |
-| Partición válida | Después de pagar una | Pagar Internet | 630.000 − 80.000 = 550.000 | `test_pagar_una_deuda_la_descuenta_del_total` |
-| Límite | Lista vacía | [] | 0 | `test_total_pendiente_sin_deudas_es_cero` |
-| Límite | Monto cero (A-07) | natillera $0 | Se acepta | `test_deuda_en_cero_es_valida` |
-| Partición inválida | Monto negativo o float | −1, 80000.0 | MontoInvalidoError | `test_monto_de_deuda_invalido_lanza_monto_invalido[negativo]`, `[float]` |
-| Partición inválida | Acreedor vacío | "", "   " | ValueError | `test_acreedor_vacio_se_rechaza[vacio]`, `[solo-espacios]` |
+| Partición inválida | Fecha pasada | 10/10/2026 | ValueError | test_fecha_de_hoy_o_anterior_da_error[fecha0] |
+| Límite | Ayer | 12/11/2026 | ValueError | test_fecha_de_hoy_o_anterior_da_error[fecha1] |
+| Límite | Hoy (A-01) | 13/11/2026 | ValueError | test_fecha_de_hoy_o_anterior_da_error[fecha2] |
+| Límite | Mañana | 14/11/2026 | Se acepta | test_fecha_futura_se_acepta[fecha0] |
+| Partición válida | Fecha lejana | 31/01/2027 | Se acepta | test_fecha_futura_se_acepta[fecha1] |
 
-**Ambigüedades encontradas:** A-07. ¿Una deuda de $0 es válida? La regla de HU-07 dice
-«monto positivo», pero es para la meta de ahorro, no para deudas. **Decisión:** se acepta
-cero (no negativo), porque una cuota ya abonada completa existe y no debe romper el total.
+### Regla 3: evaluar_gasto_ocio (HU-02)
 
-### Regla 5: `evaluar_gasto_ocio` (HU-02). Combina condiciones.
+Regla: según el escenario 2 de HU-02, si hay menos de 5 transacciones se responde "Se
+requieren al menos 5 transacciones registradas para generar sugerencias personalizadas".
+Según el escenario 1, si el gasto en ocio supera el tope, se recomienda recortar. La
+función suma solo los gastos de la categoría Ocio y devuelve cuánto se pasó del tope, o 0
+si no se pasó. En las pruebas el tope es $100.000.
 
-**Regla completa (el oráculo):** Escenario 1: «Dado que el usuario acumula $120.000 COP en
-entretenimiento y su tope mensual es $100.000 COP, cuando la IA analiza el patrón de
-consumo, entonces genera la recomendación "Has superado tu límite de ocio; te recomendamos
-reducir $30.000 COP en suscripciones secundarias este mes"». Escenario 2: «Dado que el
-usuario es nuevo y solo tiene 2 transacciones registradas, entonces el sistema responde
-"Se requieren al menos 5 transacciones registradas para generar sugerencias
-personalizadas"».
+Tabla de decisión:
 
-**Tabla de decisión** (tope de ocio $100.000):
+| Regla | ¿Hay 5 o más transacciones? | ¿El ocio supera el tope? | Resultado |
+|---|---|---|---|
+| R1 | No | No importa | ValueError |
+| R2 | Sí | No | 0 |
+| R3 | Sí | Sí | Lo que se pasó del tope |
 
-| Regla | C0: ¿Tope válido? | C1: ¿5 o más transacciones? | C2: ¿Ocio mayor que el tope? | Acción | Prueba |
-|---|---|---|---|---|---|
-| R0 | No | No importa | No importa | MontoInvalidoError | `test_el_tope_invalido_se_revisa_antes_que_el_historial` |
-| R1 | Sí | No | No importa | HistorialInsuficienteError | `ocio_tabla[R1-2-trx]`, `[R1-4-trx]` |
-| R2 | Sí | Sí | No | Sin recomendación (None) | `ocio_tabla[R2-debajo]`, `[R2-igual]` |
-| R3 | Sí | Sí | Sí | Recomienda reducir el exceso | `ocio_tabla[R3-un-peso]`, `[R3-escenario-HU02]` |
-
-Tres condiciones dan 8 combinaciones; se simplifican a 4 porque cuando C0 falla no
-importan C1 ni C2, y cuando C1 falla no importa C2.
+Son dos condiciones, que darían 4 combinaciones, pero quedan 3 porque si no hay 5
+transacciones no importa cuánto se gastó en ocio: siempre es error.
 
 | Técnica | Partición o límite | Entrada | Esperado | Prueba que lo cubre |
 |---|---|---|---|---|
-| Partición inválida | Sin transacciones | [] | HistorialInsuficienteError | `test_sin_transacciones_es_historial_insuficiente` |
-| Partición inválida | Escenario 2 tal cual | 2 transacciones | HistorialInsuficienteError con texto exacto | `ocio_tabla[R1-2-trx]` |
-| Límite | Último insuficiente | 4 transacciones | HistorialInsuficienteError | `ocio_tabla[R1-4-trx]` |
-| Límite | Primero suficiente, un peso debajo | 5 transacciones, ocio 99.999 | None | `ocio_tabla[R2-debajo]` |
-| Límite | Igual al tope (A-05) | ocio 100.000 | None | `ocio_tabla[R2-igual]` |
-| Límite | Un peso encima | ocio 100.001 | «reducir $1» | `ocio_tabla[R3-un-peso]` |
-| Partición válida | Escenario 1 (A-04) | ocio 120.000 | «reducir $20.000» | `ocio_tabla[R3-escenario-HU02]` |
-| Límite | Centavos de exceso | ocio 100.000,01 | «reducir $1» | `bordes_del_monto[centavos]` |
-| Límite | Tope cero sin ocio | ocio 0, tope 0 | None | `bordes_del_monto[tope-cero]` |
-| Partición válida | Solo «Ocio» suma (A-06) | 1.200.000 en otras, 150.000 en «ocio» minúscula | None | `test_solo_la_categoria_ocio_suma_para_el_tope` |
-| Partición válida | Datos sintéticos del mes | 9 transacciones, ocio 121.900 | «reducir $21.900» | `test_con_datos_sinteticos_del_mes` |
-| Partición inválida | Monto de transacción inválido | −5000, 5000.0, True | MontoInvalidoError | `transaccion_monto_invalido[negativo]`, `[float]`, `[bool]` |
-| Partición inválida | Texto inválido | concepto None, categoría "" o "   " | ValueError | `transaccion_texto_invalido[...]` |
+| Partición inválida (R1) | Lista vacía | 0 transacciones | ValueError | test_lista_vacia_da_error |
+| Partición inválida (R1) | Escenario 2 de la historia | 2 transacciones | ValueError | test_pocas_transacciones_da_error[2] |
+| Límite (R1) | Último valor sin historial | 4 transacciones | ValueError | test_pocas_transacciones_da_error[4] |
+| Límite (R2) | Un peso por debajo del tope | Ocio 99.999 | 0 | test_tabla_de_decision[99999-0] |
+| Límite (R2) | Igual al tope (A-05) | Ocio 100.000 | 0 | test_tabla_de_decision[100000-0] |
+| Límite (R3) | Un peso por encima | Ocio 100.001 | 1 | test_tabla_de_decision[100001-1] |
+| Partición válida (R3) | Escenario 1 de la historia (A-04) | Ocio 120.000 | 20.000 | test_tabla_de_decision[120000-20000] |
+| Partición válida (R3) | Con centavos | Ocio 100.000,50 | 0,50 (con pytest.approx) | test_tabla_de_decision[100000.5-0.5] |
+| Partición válida (R3) | Datos sintéticos del mes | 9 gastos, ocio 121.900 | 21.900 | test_con_los_gastos_del_mes |
 
-**Ambigüedades encontradas:**
-- A-04. **La más importante.** El escenario 1 pide reducir **$30.000** cuando el exceso es
-  **$20.000** ($120.000 − $100.000). Con los datos del escenario no hay forma de llegar a
-  $30.000: parece copiado del ejemplo de Camila de la semana 1 (dos suscripciones de
-  $15.000), que es otra situación. **Decisión:** recomendar reducir exactamente el exceso,
-  redondeado hacia arriba al peso, porque es lo mínimo que devuelve al usuario a su tope y
-  sale de una cuenta, no de un número suelto. Queda pendiente confirmarlo con el docente y
-  corregir el Gherkin del documento de requisitos.
-- A-05. ¿Gastar exactamente el tope es «superarlo»? **Decisión:** no; superar es estrictamente mayor.
-- A-06. ¿Cuentan para el mínimo de 5 las transacciones de cualquier categoría?
-  **Decisión:** sí; la regla dice «transacciones registradas», sin filtro. Para el tope
-  solo suma la categoría «Ocio» escrita así; poner en orden «ocio», «OCIO» o «Ócio» le
-  toca al clasificador de HU-01.
+### Dudas en las reglas
+
+Las numero como en la versión anterior del registro. Las demás eran de funciones que quité
+al simplificar el código.
+
+- A-01: la historia dice que la fecha debe ser posterior a hoy, pero no aclara si el mismo
+  día cuenta. Lo dejé como inválido, porque "posterior" significa después. Toca
+  confirmarlo con el profesor.
+- A-04: el escenario 1 de HU-02 dice que se recomienda reducir $30.000, pero el gasto es
+  $120.000 y el tope $100.000, así que la diferencia es $20.000. No encontré de dónde sale
+  $30.000. Dejé que la función devuelva la diferencia, $20.000, y queda pendiente
+  confirmarlo con el profesor.
+- A-05: no está claro si gastar exactamente el tope es "superarlo". Lo dejé como que no,
+  porque superar es pasarse. 
 
 ## 2. Pruebas de la IA descartadas o corregidas
 
-**Prompt usado:** «Eres un tester de Python. Con estas reglas y estas tablas de casos
-[se pegaron las secciones de la regla 1 a la 5], escribe pruebas con pytest para
-`deudas.py`, `recomendaciones.py` y los límites de `calcular_limite_diario`. Usa
-`@pytest.mark.parametrize` con un comentario por fila, `pytest.approx` para decimales,
-`pytest.raises` con el tipo de error exacto y esperados fijos. No modifiques el código».
-Ver bitácora, entrada 13. El borrador quedó en el commit
-`Borrador de pruebas generado por IA, sin revisar`: 25 pruebas nuevas, 3 en rojo.
+Las pruebas pasaron por dos momentos.
+
+Primera versión. Le pedí a la IA un borrador de pruebas con pytest a partir de las reglas
+y las tablas, usando parametrize, pytest.raises con el tipo de error y esperados fijos.
+Entregó 25 pruebas y 3 fallaron. Antes de tocar las pruebas que fallaron se revisó la
+regla, y en las tres el error estaba en la prueba, no en el código. La IA también propuso
+la revisión del resto del borrador con las tres preguntas (¿el esperado sale de la regla?,
+¿fallaría si rompo el código?, ¿cubre algo que otra no cubre?) y yo acepté sus cambios.
+
+Segunda versión. La primera versión terminó con 76 pruebas y mucho código difícil de
+explicar. Decidí simplificarla y quedarme solo con lo que pide la tarea: tres funciones
+con reglas, una con tabla de decisión. Quité las pruebas de funciones que ya no existen
+y las de tipos inválidos. Quedaron 35 pruebas (20 nuevas y las 15 de las semanas 5 y 6).
 
 | Prueba generada | Decisión | Por qué | En su lugar |
 |---|---|---|---|
-| `test_fecha_hoy_es_valida`: esperaba que vencer hoy no diera error | Corregida | **El esperado no sale de la regla.** Falló, y antes de tocarla se releyó la regla: «posterior» es estricto (A-01). | Fila `fecha_no_posterior[hoy]`: espera FechaVencimientoInvalidaError |
-| `test_deuda_con_monto_cero_lanza_error` | Descartada | **Regla inventada.** Tomó «monto positivo» de HU-07, que habla de la meta de ahorro, y la aplicó a las deudas. | `test_deuda_en_cero_es_valida` (A-07) |
-| `test_escenario_gherkin_recomienda_reducir`: esperaba $30.000 | Corregida | **El esperado no sale de la regla revisada.** Copió el número del Gherkin sin hacer la cuenta; la tabla ya había resuelto A-04. | `ocio_tabla[R3-escenario-HU02]` con $20.000 |
-| `test_alerta_dos_dias_antes`: `assert alerta is not None` | Corregida | **Débil.** Pasaba con cualquier texto, incluso con un monto o un número de días equivocado. | Compara el mensaje exacto del Gherkin: `alerta_tabla[R2-faltan-2]` |
-| `test_sin_alerta_si_falta_mucho[faltan 7 días]` | Descartada | **Redundante.** Misma partición que «faltan 3», que además es el límite. | Solo queda `alerta_tabla[R1-faltan-3]` |
-| Faltaban 1 día, el mismo día, vencida y estado inválido | Agregadas | La tabla de decisión tenía 6 filas y el borrador cubría 3. | `alerta_tabla[R3]`, `[R4]`, `[R5]` |
-| `test_marcar_como_pagada_devuelve_deuda`: `isinstance(…, Deuda)` | Corregida | **Débil.** Pasaba aunque devolviera la deuda sin cambiar (se confirmó con M6). | Revisa estado, acreedor, monto y que la original siga pendiente |
-| `test_pagar_dos_veces_lanza_error` | Corregida | Revisaba el tipo pero no el mensaje, que es parte de la regla. | Agrega `match=` con el texto exacto |
-| `test_total_pendiente`: el esperado se calculaba con un `sum(...)` igual al del código | Corregida | **El esperado salía del código.** Si el filtro estuviera mal en los dos lados, la prueba pasaría igual. | Esperado fijo 630.000, calculado a mano |
-| `test_historial_insuficiente`: `pytest.raises(ValueError)` | Corregida | **Débil.** MontoInvalidoError también es un ValueError, así que pasaba con el error equivocado. | `HistorialInsuficienteError` y el texto exacto |
-| `test_sin_recomendacion_si_no_supera[50.000]` y `[80.000]` | Descartadas | **Redundantes** con 99.999: misma partición, y 99.999 además es el límite. | Queda 99.999 (límite); se agrega 100.000 (A-05) y 100.001 |
-| `test_con_datos_sinteticos`: `assert evaluar_gasto_ocio(...)` | Corregida | **Débil.** Cualquier texto no vacío la hacía pasar. | Mensaje exacto con $21.900, calculado a mano |
-| `test_limite_valido` con `pytest.approx` | Corregida | El prompt pidió `approx` para decimales, pero aquí los montos son `Decimal` exactos en pesos, no `float`. `approx` deja pasar diferencias pequeñas que en plata sí importan. | Igualdad exacta con `==` |
-| `test_limite_valido[meta = disponible]` | Descartada | **Redundante** con `test_meta_igual_a_la_disponibilidad_deja_el_cupo_en_cero` (S5). | Se cita esa prueba en la tabla |
-| `test_dias_fuera_de_rango`: `pytest.raises(ValueError)` | Corregida | `pytest.raises` acepta subclases: no distingue ValueError de MontoInvalidoError. | `assert excinfo.type is error` |
-| `test_fecha_pasada_lanza_error`, `test_fecha_futura_es_valida`, `test_sin_alerta_si_falta_mucho[faltan 3]`, `test_deuda_pagada_no_genera_alerta`, `test_sin_recomendacion_si_no_supera[99.999]`, `test_meta_un_peso_mayor_que_disponible` | Conservadas | El esperado sale de la regla, fallan si se rompe el código y cubren algo único. | Se pasaron a la tabla parametrizada con su comentario |
+| test_fecha_hoy_es_valida: esperaba que una deuda que vence hoy se aceptara | Corregida | Falló, y al revisar la regla vi que dice "posterior a la fecha actual", así que hoy no vale (A-01) | test_fecha_de_hoy_o_anterior_da_error[fecha2] |
+| test_escenario_gherkin_recomienda_reducir: esperaba $30.000 | Corregida | Falló. Copiaba el número de la historia, pero $120.000 - $100.000 da $20.000 (A-04) | test_tabla_de_decision[120000-20000] |
+| test_deuda_con_monto_cero_lanza_error | Descartada | Falló. Usaba la regla de "monto positivo" de HU-07, que es para la meta de ahorro y no para deudas. Era una regla inventada | Nada, la clase Deuda ya no existe |
+| test_historial_insuficiente con pytest.raises(ValueError) sin mensaje | Corregida | Pasaba con cualquier ValueError, aunque fuera otro error | test_pocas_transacciones_da_error, que revisa también el mensaje de la regla |
+| test_sin_recomendacion_si_no_supera con 50.000 y 80.000 | Descartadas | Redundantes: están en la misma partición que 99.999, que además es el límite | test_tabla_de_decision[99999-0] |
+| test_con_datos_sinteticos: solo revisaba que hubiera alguna respuesta | Corregida | Era débil: pasaba con cualquier resultado | test_con_los_gastos_del_mes, con el esperado fijo 21.900 calculado a mano |
+| test_total_pendiente: calculaba el esperado con la misma suma que el código | Descartada | El esperado salía del código y no de la regla. Además, la función se quitó al simplificar | Nada |
+| Pruebas de alertas, pagos de deudas y tipos inválidos (versión de 76 pruebas) | Descartadas al simplificar | Probaban funciones que quité porque no las pide la rúbrica y eran difíciles de explicar | Nada |
 
-**Resumen:** la mayoría de las pruebas del borrador corrían, pero muchas comprobaban
-poco: cuatro asserts débiles, un error sin su mensaje, dos errores capturados sin tipo
-exacto, un esperado copiado del propio código y cuatro casos redundantes. Además faltaban límites, tipos inválidos y la
-mitad de las filas de las tablas de decisión, que se agregaron hasta llegar a 61 pruebas
-nuevas. Ninguna prueba se ajustó al código: los 3 fallos del borrador se resolvieron
-releyendo la regla.
+Las 20 pruebas nuevas las revisé con las mismas tres preguntas. Todos los esperados salen
+de las reglas de la sección 1 o de cuentas hechas a mano. Las pruebas sí fallan cuando
+se rompe el código, como se ve en la sección 3. Y cada prueba cubre una partición o un
+límite distinto; por ejemplo, la de 2 transacciones es el escenario de la historia y la
+de 4 es el último valor antes del mínimo.
+
+Un detalle: en la primera versión se cambió pytest.approx por igualdad exacta porque los
+montos eran Decimal. En la versión simple los montos son números normales, así que usé
+pytest.approx en la tabla de decisión, como pide la tarea para los decimales (por ejemplo,
+la fila de 100.000,50).
 
 ## 3. Romper el código a propósito
 
-Cada cambio se hizo solo, se corrió `pytest`, y se deshizo con `git restore <archivo>`.
+
+Hice cuatro cambios a mano en VS Code, uno a la vez. Después de cada cambio guardé,
+corrí pytest y anoté qué pasó. Luego deshice el cambio con git restore y revisé con
+git status que el código quedara como estaba. Antes de empezar pasaban las 35 pruebas
+y al terminar volvieron a pasar las 35.
 
 | Cambio introducido | Archivo y línea | ¿Alguna prueba falló? | Qué hice |
 |---|---|---|---|
-| M1: `<= DIAS_DE_AVISO` por `< DIAS_DE_AVISO` | `deudas.py:132` | Sí, 2: `alerta_tabla[R2-faltan-2]` y la de datos sintéticos | Nada: el borde está protegido |
-| M2: `fecha_vencimiento <= hoy` por `<` | `deudas.py:101` | Sí, 1: `fecha_no_posterior[hoy]` | Nada: es el caso de A-01 |
-| M3: `gasto_ocio <= tope` por `<` | `recomendaciones.py:97` | Sí, 2: `ocio_tabla[R2-igual]` y `bordes_del_monto[tope-cero]` | Nada |
-| M4: mínimo de transacciones 5 por 4 | `recomendaciones.py:22` | Sí, 3: `[R1-2-trx]`, `[R1-4-trx]` y la lista vacía (el mensaje dice 4) | Nada |
-| M5: redondeo `ROUND_CEILING` por `ROUND_FLOOR` | `recomendaciones.py:101` | Sí, 4: incluida `bordes_del_monto[centavos]`, que pedía $1 y recibió $0 | Nada |
-| M6: `marcar_como_pagada` devuelve siempre la misma deuda | `deudas.py:166` | Sí, 2. **El borrador de la IA no lo habría atrapado** (solo revisaba el tipo) | Confirma la corrección de la sección 2 |
-| M7: `total_pendiente` suma también las pagadas | `deudas.py:179` | Sí, 2: total y descuento tras pagar | Nada |
-| M8: `+ 1` por `+ 2` en los días restantes | `presupuesto.py:164` | Sí, 11, entre ellas el escenario de HU-04 | Nada |
-| M9: quitar la validación de que el concepto sea texto | `recomendaciones.py:51` | **No. 72 en verde** | Agregué `transaccion_texto_invalido[concepto-none]`; repetí M9 y falló |
-| M10: quitar la validación del estado de la deuda | `deudas.py:80` | **No. 72 en verde** | Agregué `test_estado_escrito_como_texto_se_rechaza`. Era grave: «Pagado» como texto pasaba como pendiente y generaba alerta |
-| M11: quitar la validación de categoría vacía | `recomendaciones.py:53` | Mismo patrón que M9, así que agregué los casos antes de probar; con ellos, sí: 2 | Agregué `[categoria-vacia]` y `[categoria-espacios]` |
+| Cambié <= por < en la validación de la fecha | deudas.py, línea 10 | Sí, 1: test_fecha_de_hoy_o_anterior_da_error con la fecha de hoy | Nada. Con el cambio se aceptaba una deuda que vence hoy, y la prueba del límite "hoy" lo detectó. |
+| Cambié el mínimo de transacciones de 5 a 4 | recomendaciones.py, línea 3 | Sí, 1: test_pocas_transacciones_da_error con 4 transacciones | Nada. Lo detectó el caso límite de 4 transacciones. |
+| Hice que la función devolviera siempre 0 | recomendaciones.py, línea 22 | Sí, 4: tres filas de la tabla de decisión (100.001, 120.000 y 100.000,50) y la prueba con los gastos del mes | Nada. Fallaron todas las pruebas que esperan un recorte mayor que 0. |
+| Cambié > por >= en la comparación con el tope | recomendaciones.py, línea 21 | No, pasaron las 35 | No agregué prueba. Explico por qué abajo. |
 
-**Lección de proceso.** La primera ronda dio resultados falsos: M2 fallaba en las mismas
-pruebas que M1, y M9 y M10 rompían pruebas del presupuesto que no tenían relación. La causa
-fue la caché de Python (`__pycache__`): el cambio y el `git restore` ocurrían en el mismo
-segundo y con el mismo tamaño de archivo, y Python siguió usando la versión rota ya
-compilada. Se repitió todo con `PYTHONDONTWRITEBYTECODE=1`, borrando `__pycache__` y con
-`pytest -p no:cacheprovider`. La tabla de arriba es la de esa segunda ronda.
+Sobre el último cambio: solo afecta el caso en que el gasto en ocio es igual al tope.
+Con un gasto de 100.000 y un tope de 100.000, el código original devuelve 0 porque
+100.000 no es mayor que 100.000. El código cambiado entra al if, pero devuelve
+100.000 - 100.000, que también es 0. Como las dos versiones dan el mismo resultado
+con cualquier dato, ninguna prueba puede notar la diferencia. A esto se le llama un
+mutante equivalente. No es que falte una prueba: la fila de 100.000 sí revisa ese
+borde, y las dos versiones cumplen la regla de HU-02, porque llegar justo al tope
+no es superarlo.
+
+También encontré un error real antes de romper el código a propósito. Al escribir las
+pruebas de recomendaciones.py fallaron 4, porque la función devolvía 0 cuando tenía
+que devolver un recorte. Primero revisé la función y estaba bien. El error estaba en
+test_recomendaciones.py: escribí el tope con un cero de más (1.000.000 en vez de
+100.000). La regla de HU-02 dice que el tope es de $100.000, así que corregí el número.
+No cambié la prueba para que pasara, la corregí para que dijera lo mismo que la regla.
+
 
 ## 4. Datos de prueba
 
-**Origen:** sintéticos, generados con IA (Claude) y revisados a mano; están en los
-fixtures `transacciones_sinteticas` y `deudas_sinteticas` de `tests/conftest.py`.
-Confirmo que no hay datos de personas reales: la persona es inventada, los negocios
-(«D'Alirio», «D'Toño», «Cooperativa Ñambú») son inventados y no hay nombres, cédulas,
-correos ni cuentas. No hay teléfonos porque el modelo de datos de la semana 4 no tiene ese
-campo; agregarlos habría sido un dato inventado que ninguna prueba usa.
+Los datos de prueba están en tests/conftest.py, en el fixture gastos_del_mes. Son
+nueve gastos de un mes de una persona inventada que vive en Neiva. La lista la
+propuso la IA y yo la escribí en el archivo. Revisé a mano la suma de los gastos de
+ocio (45.000 + 32.000 + 26.900 + 18.000 = 121.900), que es el número que usa la
+prueba test_con_los_gastos_del_mes.
 
-**Contexto local:** gastos de un mes en Neiva: almuerzo corriente en el centro, achiras en
-el terminal, tejo con compañeros, mototaxi, mercado; deudas en pesos colombianos
-(tarjeta, Internet, cuota de la moto, fiado en la tienda, natillera).
+No hay datos de personas reales: no hay nombres, cédulas, correos ni teléfonos.
+El modelo de datos del proyecto no tiene campo de teléfono, por eso no se incluyeron.
+El único nombre de negocio, D'Alirio, es inventado.
 
-**Casos difíciles incluidos:** tildes y ñ («Piñata… cumpleaños», «Cooperativa Ñambú»),
-apóstrofo («D'Alirio», «D'Toño»), texto vacío (concepto «»), espacios sobrantes al inicio
-y al final del acreedor, monto en cero (mototaxi de cortesía, natillera abonada), una deuda
-ya pagada mezclada con pendientes, y centavos ($100.000,01, en las pruebas de borde).
+Para que tuvieran contexto local usé gastos comunes en Neiva, como el almuerzo
+corriente, las achiras en el terminal, el tejo y el mototaxi.
 
-**Revisión de los datos de la IA:** se revisó fila por fila que ningún nombre fuera de
-una persona o de una empresa conocida («cine» y «streaming» quedaron genéricos, sin marca).
-Las sumas que usan las pruebas (ocio $121.900, pendientes $630.000) se hicieron a mano y
-están escritas en el docstring de cada fixture; las pruebas fijan esos números, no los
-recalculan.
+Casos difíciles que incluí a propósito:
+
+- Tildes y ñ: "Piñata para el cumpleaños de la sobrina", "Suscripción de streaming".
+- Apóstrofo: "Tejo en D'Alirio".
+- Texto vacío: un gasto de transporte sin concepto.
+- Monto en cero: "Mototaxi de cortesía", que no cobró nada.
+
+La función tiene que funcionar con todos estos casos. Por ejemplo, el gasto sin
+concepto y el de monto cero cuentan para el mínimo de 5 transacciones, pero no
+cambian la suma del ocio porque son de transporte.

@@ -4,8 +4,8 @@ Finanzas personales que aconsejan, no solo registran.
 
 - **Estudiante:** Nicolás Andrés Gutiérrez Collazos
 - **Seminario:** Inteligencia Artificial Aplicada al Ciclo de Vida del Software
-- **Estado:** límite diario (HU-04), alertas y pagos de deudas (HU-03, HU-06) y recomendación
-  por gasto en ocio (HU-02), con 76 pruebas (semana 7)
+- **Estado:** límite diario (HU-04), validación de la fecha de deudas (HU-03) y recomendación
+  por gasto en ocio (HU-02), con 35 pruebas (versión simplificada de la semana 7)
 
 ---
 
@@ -32,11 +32,9 @@ que recibe los números del mes y devuelve cuánto se puede gastar cada día que
 
 **Desde la semana 7 también**
 
-- Valida que una deuda nueva venza después de hoy y genera el recordatorio cuando faltan
-  2 días, 1 día o vence hoy (HU-03), en `deudas.py`.
-- Marca una deuda como pagada, impide pagarla dos veces y suma lo que falta por pagar (HU-06).
-- Avisa cuando el gasto en ocio pasó el tope y dice cuánto recortar, siempre que haya al
-  menos 5 transacciones (HU-02), en `recomendaciones.py`.
+- Valida que una deuda nueva venza después de hoy (HU-03), en `deudas.py`.
+- Dice cuánto recortar cuando el gasto en ocio pasa el tope, siempre que haya al menos
+  5 transacciones (HU-02), en `recomendaciones.py`.
 
 **Lo que todavía no hace** (viene en las siguientes semanas, según el diseño del ADR-001):
 registrar gastos en lenguaje natural con la API del LLM, guardar en PostgreSQL, enviar
@@ -167,7 +165,7 @@ Los supuestos están explicados en el docstring de la función
 
 ## 5. Pruebas
 
-Con el entorno activo, un solo comando corre las 76 pruebas:
+Con el entorno activo, un solo comando corre las 35 pruebas:
 
 ```bash
 pytest
@@ -188,9 +186,9 @@ Están repartidas así:
 | Archivo | Cuántas | Qué prueba |
 | --- | --- | --- |
 | `test_presupuesto.py` | 15 | HU-04: casos normales, límite y de error (semanas 5 y 6, sin cambios) |
-| `test_presupuesto_tabla.py` | 17 | HU-04: particiones y valores límite que faltaban (semana 7) |
-| `test_deudas.py` | 26 | HU-03 y HU-06, con tabla de decisión para la alerta |
-| `test_recomendaciones.py` | 18 | HU-02, con tabla de decisión |
+| `test_presupuesto_tabla.py` | 6 | HU-04: valores límite que faltaban |
+| `test_deudas.py` | 5 | HU-03: fechas pasadas, hoy y futuras |
+| `test_recomendaciones.py` | 9 | HU-02, con tabla de decisión |
 
 `tests/conftest.py` tiene los datos sintéticos (fixtures) que usan las pruebas. El diseño
 de cada caso, de dónde sale su esperado y la revisión de las pruebas generadas con IA
@@ -225,13 +223,13 @@ smartfinance-ai/
 │   └── smartfinance/
 │       ├── __init__.py
 │       ├── presupuesto.py         calcular_limite_diario y sus errores (HU-04)
-│       ├── deudas.py              Vencimientos, alertas y pagos de deudas (HU-03, HU-06)
+│       ├── deudas.py              Validación de la fecha de vencimiento (HU-03)
 │       └── recomendaciones.py     Recomendación por gasto en ocio (HU-02)
 └── tests/
     ├── conftest.py                Datos sintéticos de prueba (fixtures)
     ├── test_presupuesto.py        Las 15 pruebas de las semanas 5 y 6
     ├── test_presupuesto_tabla.py  Límites y particiones de HU-04
-    ├── test_deudas.py             Pruebas de HU-03 y HU-06
+    ├── test_deudas.py             Pruebas de HU-03
     └── test_recomendaciones.py    Pruebas de HU-02
 ```
 
@@ -243,7 +241,8 @@ decisiones quedaron registradas. Tres archivos cuentan la historia completa:
 - **`bitacora_ia.md`**: cada sugerencia importante del asistente, con la decisión que se
   tomó (aceptada, aceptada con cambios o rechazada), la razón y cómo se verificó. Incluye
   las entradas de la semana 5 (construcción), la semana 6 (revisión) y la semana 7
-  (pruebas).
+  (pruebas) y la simplificación final, donde la IA me ayudo con el código simple y yo lo
+  escribí, lo probé y rompí el código a propósito para comprobar las pruebas.
 - **`registro_pruebas.md`**: las reglas de cada función, sus tablas de casos, qué pruebas
   de la IA se corrigieron o descartaron y por qué, y los errores introducidos a propósito.
 - **`revision_seguridad.md`**: la revisión de código y seguridad de la semana 6, con los
