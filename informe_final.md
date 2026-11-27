@@ -148,3 +148,14 @@ en las secciones 7 y 8 del [documento de las semanas 1 a 4](docs/documento_seman
 | Transparencia | Anoté cada uso de IA en la bitácora con su prompt, su resultado y cómo lo verifiqué. Cuando vi que unas entradas no dejaban claro quién hizo qué, agregué una nota de corrección en lugar de borrarlas. Y decidí no disimular el texto generado por IA | [bitacora_ia.md](bitacora_ia.md), entradas 1 a 19 y la nota de corrección; sección "Uso de IA" del [README](README.md) |
 | Responsabilidad | Lo que entrego es mi responsabilidad, aunque lo haya propuesto la IA. Por eso las reglas de las historias, y no la IA, deciden qué espera cada prueba; simplifiqué el código cuando no podía explicarlo; rompí el código a mano para comprobar las pruebas; y el pipeline revisa cada cambio que subo | Secciones 1 y 3 de [registro_pruebas.md](registro_pruebas.md), [pruebas.yml](.github/workflows/pruebas.yml) y entradas 16 a 19 de la [bitácora](bitacora_ia.md) |
 | Propiedad intelectual y política de uso | Usé IA como lo permite el seminario: declarando en cada entrega qué herramienta usé y para qué. No copié código de otros proyectos. Las dos herramientas que usa el proyecto, pytest y ruff, son de código abierto. El README declara la licencia MIT para mi código | Sección "Uso de IA" y sección 8 del [README](README.md), [requirements.txt](requirements.txt) |
+El dilema más importante llegó al final del proyecto. Un análisis de mi repositorio
+estimó que entre el 85 y el 90 % del contenido parecía escrito por IA, y encontré un
+documento con recomendaciones para bajar esa apariencia: cambiar los símbolos que suele
+usar la IA, cambiar el estilo del texto y borrar partes del registro que delataban que lo
+había hecho un agente. al momento de leer quise pedirle a la ia que modificara todo pero
+al final decidi hacerlo a conciencia propia. Tenía dos opciones: disimular el uso de
+IA, o hacer más trabajo yo mismo y contar con honestidad quién hizo cada cosa. Escogí el
+segundo. Simplifiqué el código hasta poder explicarlo, lo escribí a mano, rompí el código
+yo mismo para comprobar las pruebas y agregué una nota en la bitácora aclarando qué
+entradas había redactado la IA. Lo decidí porque el seminario permite usar IA siempre que
+se declare, y disimularlo habría convertido una herramienta permitida en un engaño.
